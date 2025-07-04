@@ -4,7 +4,6 @@ import { useWalletStore } from "@/stores/wallet";
 import { thirdwebClient } from "@/config/thirdweb";
 
 export function Navbar() {
-	const { isConnected } = useWalletStore();
 	const router = useRouter();
 
 	return (
@@ -22,14 +21,12 @@ export function Navbar() {
 							>
 								Home
 							</Link>
-							{isConnected && (
-								<Link
-									to="/create-agent"
-									className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-								>
-									Create Agent
-								</Link>
-							)}
+							<Link
+								to="/create-agent"
+								className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+							>
+								Create Agent
+							</Link>
 						</div>
 					</div>
 					<div className="flex items-center gap-4">

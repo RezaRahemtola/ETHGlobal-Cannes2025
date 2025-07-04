@@ -1,7 +1,6 @@
 import { useWalletStore } from "@/stores/wallet";
 import { useEffect } from "react";
 import { useActiveAccount, useActiveWallet } from "thirdweb/react";
-import { toast } from "sonner";
 
 export const WalletSync = () => {
 	const account = useActiveAccount();
@@ -9,8 +8,6 @@ export const WalletSync = () => {
 	const { connect, disconnect } = useWalletStore();
 
 	useEffect(() => {
-		console.log("heu");
-		toast.error("Please connect your wallet to access this page");
 		if (account) {
 			connect(account.address);
 		} else {

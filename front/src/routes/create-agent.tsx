@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useWalletStore } from "@/stores/wallet";
 import { Bot, Globe, Shield, Sparkles } from "lucide-react";
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/create-agent")({
 	component: CreateAgent,
@@ -25,11 +26,12 @@ function CreateAgent() {
 
 	useEffect(() => {
 		if (!isConnected) {
+			toast.error("Please connect your wallet to create an agent.");
 			router.navigate({ to: "/" });
 		}
 	}, [isConnected, router]);
 
-	const handleSubmit = (e: React.FormEvent) => {
+	const handleSubmit = (e: FormEvent) => {
 		e.preventDefault();
 		console.log("Creating agent with data:", formData);
 		alert("Agent creation submitted! (This is a mock implementation)");
