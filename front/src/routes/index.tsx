@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useWalletStore } from "@/stores/wallet";
-import { Bot, Shield, Users, Zap } from "lucide-react";
+import { Bot, Cpu, Lock } from "lucide-react";
 
 export const Route = createFileRoute("/")({
 	component: Index,
@@ -15,11 +15,11 @@ function Index() {
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 				<div className="text-center mb-16">
 					<h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
-						Deploy AI Agents with <span className="text-blue-600">ENS & Oasis</span>
+						Deploy AI Agents with <span className="text-blue-600">ENS & Oasis ROFL</span>
 					</h1>
 					<p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">
-						Create, deploy, and manage intelligent AI agents with decentralized identity and privacy-first
-						infrastructure. Your AI agents deserve secure, permanent identities.
+						Easily deploy AI agents with human-readable ENS domains, restricted permissions, and Oasis ROFL TEE for
+						secure computation with local models.
 					</p>
 					{!isConnected && (
 						<div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 max-w-md mx-auto">
@@ -36,40 +36,40 @@ function Index() {
 						</CardHeader>
 						<CardContent>
 							<CardDescription>
-								Deploy autonomous AI agents capable of complex reasoning and decision-making
+								Access your AI agents through human-readable ENS domains like myagent.eth
 							</CardDescription>
 						</CardContent>
 					</Card>
 
 					<Card className="hover:shadow-lg transition-shadow">
 						<CardHeader className="text-center">
-							<Shield className="h-12 w-12 mx-auto text-green-600 mb-4" />
-							<CardTitle>ENS Integration</CardTitle>
+							<Lock className="h-12 w-12 mx-auto text-green-600 mb-4" />
+							<CardTitle>Restricted Permissions</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<CardDescription>Fine-grained control over what your AI agents can access and do</CardDescription>
+						</CardContent>
+					</Card>
+
+					<Card className="hover:shadow-lg transition-shadow">
+						<CardHeader className="text-center">
+							<Cpu className="h-12 w-12 mx-auto text-purple-600 mb-4" />
+							<CardTitle>Oasis ROFL TEE</CardTitle>
 						</CardHeader>
 						<CardContent>
 							<CardDescription>
-								Give your AI agents permanent, human-readable identities on the blockchain
+								Run your AI agents in secure Trusted Execution Environments with local models
 							</CardDescription>
 						</CardContent>
 					</Card>
 
 					<Card className="hover:shadow-lg transition-shadow">
 						<CardHeader className="text-center">
-							<Zap className="h-12 w-12 mx-auto text-purple-600 mb-4" />
-							<CardTitle>Oasis Privacy</CardTitle>
+							<Bot className="h-12 w-12 mx-auto text-orange-600 mb-4" />
+							<CardTitle>Easy Deployment</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<CardDescription>Leverage confidential computing for secure, private AI agent operations</CardDescription>
-						</CardContent>
-					</Card>
-
-					<Card className="hover:shadow-lg transition-shadow">
-						<CardHeader className="text-center">
-							<Users className="h-12 w-12 mx-auto text-orange-600 mb-4" />
-							<CardTitle>Community Driven</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<CardDescription>Join a growing ecosystem of AI agent creators and users</CardDescription>
+							<CardDescription>Deploy your AI agents in minutes with our simple interface</CardDescription>
 						</CardContent>
 					</Card>
 				</div>
@@ -93,16 +93,16 @@ function Index() {
 								</div>
 								<h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Configure Agent</h3>
 								<p className="text-gray-600 dark:text-gray-300">
-									Set up your AI agent's parameters, capabilities, and ENS identity
+									Set up your AI agent's parameters, ENS domain, and permission restrictions
 								</p>
 							</div>
 							<div className="text-center">
 								<div className="bg-purple-100 dark:bg-purple-900/30 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
 									<span className="text-2xl font-bold text-purple-600">3</span>
 								</div>
-								<h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Deploy & Manage</h3>
+								<h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Deploy to TEE</h3>
 								<p className="text-gray-600 dark:text-gray-300">
-									Deploy your agent to Oasis and manage it through our dashboard
+									Deploy your agent to Oasis ROFL TEE for secure, private execution
 								</p>
 							</div>
 						</div>
