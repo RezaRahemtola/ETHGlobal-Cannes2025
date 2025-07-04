@@ -1,28 +1,19 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useWalletStore } from "@/stores/wallet";
 import { Bot, Globe, Shield, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/create-agent")({
 	component: CreateAgent,
-	beforeLoad: () => {
-		const { isConnected } = useWalletStore.getState();
-		if (!isConnected) {
-			throw redirect({
-				to: "/",
-				search: {
-					redirect: "/create-agent",
-				},
-			});
-		}
-	},
 });
 
 function CreateAgent() {
+	const { isConnected } = useWalletStore();
+	const router = useRouter();
 	const [formData, setFormData] = useState({
 		name: "",
 		description: "",
@@ -31,6 +22,12 @@ function CreateAgent() {
 		model: "gpt-4",
 		privacy: "public",
 	});
+
+	useEffect(() => {
+		if (!isConnected) {
+			router.navigate({ to: "/" });
+		}
+	}, [isConnected, router]);
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
