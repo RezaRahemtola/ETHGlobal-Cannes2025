@@ -1,10 +1,10 @@
 [project]
 name = "elara-wrapper"
-version = "0.0.1"
+version = "0.0.2"
 description = "A FastAPI middleware package to validate requests to Elara agents based on the permissions set in their ENS name."
 authors = []
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10,<4.0"
 dependencies = [
     "fastapi[standard] (>=0.115.14,<0.116.0)"
 ]
