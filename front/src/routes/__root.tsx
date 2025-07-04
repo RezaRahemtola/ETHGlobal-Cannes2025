@@ -1,20 +1,19 @@
-import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { createRootRoute, Outlet } from "@tanstack/react-router";
+import { ThirdwebProvider } from "thirdweb/react";
+import { Navbar } from "@/components/navbar";
+import { WalletSync } from "@/components/wallet-sync";
+import { Toaster } from "@/components/ui/sonner.tsx";
+import "sonner/dist/styles.css";
 
 export const Route = createRootRoute({
 	component: () => (
-		<>
-			<div className="p-2 flex gap-2">
-				<Link to="/" className="[&.active]:font-bold">
-					Home
-				</Link>{" "}
-				<Link to="/about" className="[&.active]:font-bold">
-					About
-				</Link>
+		<ThirdwebProvider>
+			<WalletSync />
+			<div className="min-h-screen bg-background">
+				<Navbar />
+				<Outlet />
+				<Toaster />
 			</div>
-			<hr />
-			<Outlet />
-			<TanStackRouterDevtools />
-		</>
+		</ThirdwebProvider>
 	),
 });
