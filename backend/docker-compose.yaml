@@ -1,0 +1,11 @@
+services:
+  elara-backend:
+    build:
+      dockerfile: ./Dockerfile
+    image: elara-backend
+    container_name: elara-backend
+    restart: always
+    ports:
+      - "8085:8000"
+    env_file:
+      - .env
