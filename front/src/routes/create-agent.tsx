@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useWalletStore } from "@/stores/wallet";
-import { Bot, Globe, Shield, Sparkles } from "lucide-react";
+import { Bot, Globe, Shield, Sparkles, Plus, X } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -21,6 +21,10 @@ function CreateAgent() {
 		identifier: "",
 	});
 
+	const [envVars, setEnvVars] = useState<{ key: string; value: string }[]>([
+		{ key: "", value: "" }
+	]);
+
 	useEffect(() => {
 		if (!isConnected) {
 			toast.error("Please connect your wallet to create an agent.");
@@ -31,11 +35,29 @@ function CreateAgent() {
 	const handleSubmit = (e: FormEvent) => {
 		e.preventDefault();
 		console.log("Creating agent with data:", formData);
+		console.log("Environment variables:", envVars);
 		alert("Agent creation submitted! (This is a mock implementation)");
 	};
 
 	const handleInputChange = (field: string, value: string) => {
 		setFormData((prev) => ({ ...prev, [field]: value }));
+	};
+
+	const addEnvVar = () => {
+		setEnvVars([...envVars, { key: "", value: "" }]);
+	};
+
+	const removeEnvVar = (index: number) => {
+		if (envVars.length > 1) {
+			setEnvVars(envVars.filter((_, i) => i !== index));
+		}
+	};
+
+	const updateEnvVar = (index: number, field: 'key' | 'value', value: string) => {
+		const updated = envVars.map((envVar, i) =>
+			i === index ? { ...envVar, [field]: value } : envVar
+		);
+		setEnvVars(updated);
 	};
 
 	return (
@@ -91,6 +113,58 @@ function CreateAgent() {
 									onChange={(e) => handleInputChange("description", e.target.value)}
 									required
 								/>
+							</div>
+
+							<div className="space-y-4">
+								<div className="flex items-center justify-between">
+									<Label className="text-base font-medium">Environment Variables</Label>
+									<Button
+										type="button"
+										variant="outline"
+										size="sm"
+										onClick={addEnvVar}
+										className="flex items-center gap-1"
+									>
+										<Plus className="h-4 w-4" />
+										Add Variable
+									</Button>
+								</div>
+								<p className="text-sm text-muted-foreground">
+									These variables will be encrypted and securely stored on-chain with Oasis privacy features.
+								</p>
+								<div className="space-y-3">
+									{envVars.map((envVar, index) => (
+										<div key={index} className="flex items-center gap-2 p-3 border rounded-lg bg-gray-50 dark:bg-gray-800">
+											<div className="flex-1">
+												<Input
+													placeholder="Variable name (e.g., API_KEY)"
+													value={envVar.key}
+													onChange={(e) => updateEnvVar(index, 'key', e.target.value)}
+													className="bg-white dark:bg-gray-700"
+												/>
+											</div>
+											<div className="flex-1">
+												<Input
+													placeholder="Variable value"
+													type="password"
+													value={envVar.value}
+													onChange={(e) => updateEnvVar(index, 'value', e.target.value)}
+													className="bg-white dark:bg-gray-700"
+												/>
+											</div>
+											<Button
+												type="button"
+												variant="ghost"
+												size="sm"
+												onClick={() => removeEnvVar(index)}
+												disabled={envVars.length === 1}
+												className="p-2"
+											>
+												<X className="h-4 w-4" />
+											</Button>
+										</div>
+									))}
+								</div>
 							</div>
 
 							<div className="pt-6">
