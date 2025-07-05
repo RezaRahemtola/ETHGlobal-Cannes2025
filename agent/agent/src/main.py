@@ -1,15 +1,16 @@
 from datetime import datetime
 from http import HTTPStatus
 
-from elara_wrapper import add_elara_middleware, GeneratePostRequestBody
+from elara_wrapper import add_elara_middleware, GeneratePostRequestBody, elara_auth_router
 from fastapi import FastAPI, HTTPException
 
 from agent.crew import AgentCrew
 
 app = FastAPI()
 
-# Add the Elara middleware with a validation string
-middleware = add_elara_middleware(app, "True")
+# Add the Elara middleware & auth router
+add_elara_middleware(app, "True")
+app.include_router(elara_auth_router)
 
 
 @app.post("/generate")

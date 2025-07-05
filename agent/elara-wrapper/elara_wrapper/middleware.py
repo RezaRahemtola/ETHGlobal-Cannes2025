@@ -2,9 +2,27 @@
 Elara FastAPI Middleware for request validation
 """
 
-from fastapi import FastAPI, Request
+from http import HTTPStatus
+
+from eth_account.messages import encode_defunct
+from fastapi import FastAPI, Request, HTTPException
+from hexbytes import HexBytes
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import JSONResponse
+from web3 import Web3
+
+from elara_wrapper.auth import auth_message
+from elara_wrapper.interfaces import GeneratePostRequestBody
+
+
+def is_eth_signature_valid(message: str, signature: str, address: str) -> bool:
+    """Check if a message signature with an Ethereum wallet is valid"""
+    w3 = Web3(Web3.HTTPProvider(""))
+    encoded_message = encode_defunct(text=message)
+    recovered_address = w3.eth.account.recover_message(
+        encoded_message,
+        signature=HexBytes(signature),
+    )
+    return address.lower() == recovered_address.lower()
 
 
 class ElaraMiddleware(BaseHTTPMiddleware):
@@ -36,13 +54,10 @@ class ElaraMiddleware(BaseHTTPMiddleware):
         """
         try:
             # Perform validation
-            if not self._validate_request(request):
-                return JSONResponse(
-                    status_code=403,
-                    content={
-                        "error": "Request validation failed",
-                        "message": "Access denied",
-                    },
+            if not await self._validate_request(request):
+                return HTTPException(
+                    status_code=HTTPStatus.FORBIDDEN,
+                    detail="Elara validation failed, access denied",
                 )
 
             # Continue to next middleware/endpoint
@@ -50,12 +65,12 @@ class ElaraMiddleware(BaseHTTPMiddleware):
             return response
 
         except Exception as e:
-            return JSONResponse(
-                status_code=500,
-                content={"error": "Middleware error", "message": str(e)},
+            return HTTPException(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                detail=f"Internal Elara middleware error: {e}",
             )
 
-    def _validate_request(self, request: Request) -> bool:
+    async def _validate_request(self, request: Request) -> bool:
         """
         Validate the request based on the validation string
 
@@ -65,6 +80,31 @@ class ElaraMiddleware(BaseHTTPMiddleware):
         Returns:
             True if request is valid, False otherwise
         """
+        # Only validate /generate route
+        if request.url.path != "/generate":
+            return True
+
+        body = await request.body()
+
+        try:
+            body_data = body.decode()
+            request_body = GeneratePostRequestBody.model_validate_json(body_data)
+
+            if not is_eth_signature_valid(
+                auth_message(request_body.address),
+                request_body.signature,
+                request_body.address,
+            ):
+                raise HTTPException(
+                    status_code=HTTPStatus.FORBIDDEN,
+                    detail="Signature doesn't match the given address",
+                )
+        except Exception:
+            raise HTTPException(
+                status_code=HTTPStatus.BAD_REQUEST,
+                detail="Invalid request body format",
+            )
+
         return self.validation_string == "True"
 
 
