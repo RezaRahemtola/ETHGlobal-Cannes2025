@@ -6,7 +6,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 def auth_message(address: str) -> str:
-    return f"Sign to with your wallet {address.lower()} to access the Elara agent."
+    return f"Sign with your wallet {address.lower()} to access the Elara agent."
 
 
 @router.post("/message")
