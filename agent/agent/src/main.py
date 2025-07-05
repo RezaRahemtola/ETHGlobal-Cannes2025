@@ -1,7 +1,7 @@
 from datetime import datetime
 from http import HTTPStatus
 
-from elara_wrapper import add_elara_middleware
+from elara_wrapper import add_elara_middleware, GeneratePostRequestBody
 from fastapi import FastAPI, HTTPException
 
 from agent.crew import AgentCrew
@@ -13,10 +13,10 @@ middleware = add_elara_middleware(app, "True")
 
 
 @app.post("/generate")
-async def root():
+async def root(body: GeneratePostRequestBody):
 
     inputs = {
-        'topic': 'AI LLMs',
+        'topic': body.prompt,
         'current_year': str(datetime.now().year)
     }
 

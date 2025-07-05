@@ -1157,19 +1157,20 @@ files = [
 
 [[package]]
 name = "elara-wrapper"
-version = "0.0.2"
+version = "0.0.4"
 description = "A FastAPI middleware package to validate requests to Elara agents based on the permissions set in their ENS name."
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 markers = "python_version <= \"3.11\" or python_version == \"3.12\" or python_version >= \"3.13\""
 files = [
-    {file = "elara_wrapper-0.0.2-py3-none-any.whl", hash = "sha256:c511485db4057bcef27f55c3919426f26dc5c62e1ad29a28c7f8c1a4aff712d2"},
-    {file = "elara_wrapper-0.0.2.tar.gz", hash = "sha256:128855987596b0407d6d3b676f698beea9824246dc760d9e83e7c73f312c17b8"},
+    {file = "elara_wrapper-0.0.4-py3-none-any.whl", hash = "sha256:4cd8bd060c70dd6d99661e7eea9df0aa0fc316e53c83029e1727b680c289f023"},
+    {file = "elara_wrapper-0.0.4.tar.gz", hash = "sha256:3aead703d104178c42e053e7a7cdce82c02724eb8851798e7fa58fe90d72c30b"},
 ]
 
 [package.dependencies]
 fastapi = {version = ">=0.115.14,<0.116.0", extras = ["standard"]}
+pydantic = ">=2.11.7,<3.0.0"
 
 [[package]]
 name = "email-validator"
@@ -2963,15 +2964,15 @@ files = [
 
 [[package]]
 name = "mem0ai"
-version = "0.1.113"
+version = "0.1.114"
 description = "Long-term memory for AI Agents"
 optional = false
 python-versions = "<4.0,>=3.9"
 groups = ["main"]
 markers = "python_version <= \"3.11\" or python_version == \"3.12\" or python_version >= \"3.13\""
 files = [
-    {file = "mem0ai-0.1.113-py3-none-any.whl", hash = "sha256:0b68fe5b2786bb4da59cd8dae53ccf8f59024eb1078af42489930281ea5dd785"},
-    {file = "mem0ai-0.1.113.tar.gz", hash = "sha256:f6b5aff930e2de574630264a5d54d22404bb8f82e3d577a17bcbc13ca759293e"},
+    {file = "mem0ai-0.1.114-py3-none-any.whl", hash = "sha256:dfb7f0079ee282f5d9782e220f6f09707bcf5e107925d1901dbca30d8dd83f9b"},
+    {file = "mem0ai-0.1.114.tar.gz", hash = "sha256:b27886132eaec78544e8b8b54f0b14a36728f3c99da54cb7cb417150e2fad7e1"},
 ]
 
 [package.dependencies]
@@ -2984,11 +2985,11 @@ sqlalchemy = ">=2.0.31"
 
 [package.extras]
 dev = ["isort (>=5.13.2)", "pytest (>=8.2.2)", "ruff (>=0.6.5)"]
-extras = ["boto3 (>=1.34.0)", "elasticsearch (>=8.0.0)", "langchain-community (>=0.0.0)", "langchain-memgraph (>=0.1.0)", "opensearch-py (>=2.0.0)", "sentence-transformers (>=2.2.2)"]
-graph = ["langchain-neo4j (>=0.4.0)", "neo4j (>=5.23.1)", "rank-bm25 (>=0.2.2)"]
+extras = ["boto3 (>=1.34.0)", "elasticsearch (>=8.0.0)", "langchain-community (>=0.0.0)", "langchain-memgraph (>=0.1.0)", "opensearch-py (>=2.0.0)", "sentence-transformers (>=5.0.0)"]
+graph = ["langchain-aws (>=0.2.23)", "langchain-neo4j (>=0.4.0)", "neo4j (>=5.23.1)", "rank-bm25 (>=0.2.2)"]
 llms = ["google-genai (>=1.0.0)", "google-generativeai (>=0.3.0)", "groq (>=0.3.0)", "litellm (>=0.1.0)", "ollama (>=0.1.0)", "together (>=0.2.10)", "vertexai (>=0.1.0)"]
 test = ["pytest (>=8.2.2)", "pytest-asyncio (>=0.23.7)", "pytest-mock (>=3.14.0)"]
-vector-stores = ["azure-search-documents (>=11.4.0b8)", "chromadb (>=0.4.24)", "faiss-cpu (>=1.7.4)", "pinecone (<7.0.0)", "pinecone-text (>=0.1.1)", "upstash-vector (>=0.1.0)", "vecs (>=0.4.0)", "weaviate-client (>=4.4.0)"]
+vector-stores = ["azure-search-documents (>=11.4.0b8)", "chromadb (>=0.4.24)", "faiss-cpu (>=1.7.4)", "pinecone (<=7.3.0)", "pinecone-text (>=0.10.0)", "pymochow (>=2.2.9)", "pymongo (>=4.13.2)", "upstash-vector (>=0.1.0)", "vecs (>=0.4.0)", "weaviate-client (>=4.4.0)"]
 
 [[package]]
 name = "mergedeep"
@@ -6929,4 +6930,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<=3.13"
-content-hash = "352025cafc7eef6feac7f4a273b9ac0e81a2524240b01c269e80310747b013c6"
+content-hash = "c5aeaa45bc588ca704200ef6865164bbdef4fa4391de2ab4f23e42c69fe4fa44"
