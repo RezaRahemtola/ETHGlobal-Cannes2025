@@ -77,7 +77,11 @@ function CreateAgent() {
 	// Deployment progress state
 	const [deploymentProgress, setDeploymentProgress] = useState<{
 		backend: "pending" | "loading" | "completed";
-	}>({ backend: "pending" });
+		alephVmHashSet: "pending" | "loading" | "completed";
+	}>({ backend: "pending", alephVmHashSet: "pending" });
+
+	// Deployment response state
+	const [deploymentResponse, setDeploymentResponse] = useState<{ [key: string]: unknown } | null>(null);
 
 	useEffect(() => {
 		if (!isConnected) {
@@ -330,7 +334,7 @@ function CreateAgent() {
 			setRegistrationProgress((prev) => ({ ...prev, ensRegistered: "completed" }));
 
 			// Wait before next transaction to avoid nonce issues
-			await new Promise((resolve) => setTimeout(resolve, 2000));
+			await new Promise((resolve) => setTimeout(resolve, 1000));
 
 			// Step 2: Set content hash
 			setRegistrationProgress((prev) => ({ ...prev, contentHashSet: "loading" }));
@@ -338,7 +342,7 @@ function CreateAgent() {
 			setRegistrationProgress((prev) => ({ ...prev, contentHashSet: "completed" }));
 
 			// Wait before next transaction
-			await new Promise((resolve) => setTimeout(resolve, 2000));
+			await new Promise((resolve) => setTimeout(resolve, 1000));
 
 			// Step 3: Set allowed callers
 			setRegistrationProgress((prev) => ({ ...prev, allowedCallersSet: "loading" }));
@@ -348,7 +352,7 @@ function CreateAgent() {
 			// Step 4: Set avatar if profile picture exists
 			if (formData.profilePicture) {
 				// Wait before next transaction
-				await new Promise((resolve) => setTimeout(resolve, 2000));
+				await new Promise((resolve) => setTimeout(resolve, 1000));
 				setRegistrationProgress((prev) => ({ ...prev, avatarSet: "loading" }));
 				await setAvatar(agentAccount);
 				setRegistrationProgress((prev) => ({ ...prev, avatarSet: "completed" }));
@@ -359,7 +363,19 @@ function CreateAgent() {
 			// Step 5: Deploy agent code
 			setDeploymentStep("deploying");
 			try {
-				await deployAgentCode();
+				const deployResponse = await deployAgentCode();
+
+				// Step 6: Set aleph_vm_hash in ENS record if deployment was successful
+				if (deployResponse?.program_hash) {
+					// Wait before next transaction
+					await new Promise((resolve) => setTimeout(resolve, 1000));
+					setDeploymentProgress((prev) => ({ ...prev, alephVmHashSet: "loading" }));
+					await setAlephVmHash(agentAccount, deployResponse.program_hash as string);
+					setDeploymentProgress((prev) => ({ ...prev, alephVmHashSet: "completed" }));
+				} else {
+					setDeploymentProgress((prev) => ({ ...prev, alephVmHashSet: "completed" }));
+				}
+
 				setDeploymentStep("deployed");
 			} catch (error) {
 				console.error("Error deploying agent code:", error);
@@ -494,6 +510,34 @@ function CreateAgent() {
 		});
 	};
 
+	const setAlephVmHash = async (account: Account, programHash: string) => {
+		// Set aleph_vm_hash in ENS registry
+		const registryContract = getContract({
+			client: thirdwebClient,
+			chain: base,
+			address: env.ENS_BASE_REGISTRY_CONTRACT_ADDRESS,
+		});
+
+		const node = namehash(`${formData.identifier}.elara-app.eth`);
+
+		const transaction = prepareContractCall({
+			contract: registryContract,
+			method: "function setText(bytes32 node, string key, string value)",
+			params: [node, "aleph_vm_hash", programHash],
+		});
+
+		const result = await sendTransaction({
+			transaction,
+			account,
+		});
+
+		await waitForReceipt({
+			client: thirdwebClient,
+			chain: base,
+			transactionHash: result.transactionHash,
+		});
+	};
+
 	const deployAgentCode = async () => {
 		if (!formData.agentCodeZip) {
 			throw new Error("No agent code ZIP file provided");
@@ -525,10 +569,14 @@ function CreateAgent() {
 			});
 
 			setDeploymentProgress((prev) => ({ ...prev, backend: "completed" }));
+			setDeploymentResponse(deployResponse.data!);
 			toast.success("Agent code deployed successfully to Aleph network!");
 
 			// Log deployment result
 			console.log("Agent deployment result:", deployResponse.data);
+
+			// Return the deployment response so the calling code can access program_hash
+			return deployResponse.data;
 		} catch (error) {
 			console.error("Error deploying agent code:", error);
 			setDeploymentProgress((prev) => ({ ...prev, backend: "pending" }));
@@ -1068,6 +1116,26 @@ function CreateAgent() {
 													Deploy to Aleph network
 												</span>
 											</div>
+											<div className="flex items-center gap-2 text-sm">
+												{deploymentProgress.alephVmHashSet === "completed" ? (
+													<CheckCircle className="h-4 w-4 text-green-500" />
+												) : deploymentProgress.alephVmHashSet === "loading" ? (
+													<Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
+												) : (
+													<div className="h-4 w-4 rounded-full border-2 border-gray-300"></div>
+												)}
+												<span
+													className={
+														deploymentProgress.alephVmHashSet === "completed"
+															? "text-green-700 dark:text-green-300"
+															: deploymentProgress.alephVmHashSet === "loading"
+																? "text-indigo-700 dark:text-indigo-300"
+																: "text-gray-600 dark:text-gray-400"
+													}
+												>
+													Set aleph_vm_hash in ENS record
+												</span>
+											</div>
 										</div>
 									</div>
 								)}
@@ -1113,6 +1181,34 @@ function CreateAgent() {
 													{formData.identifier}.elara-app.eth
 												</a>
 											</p>
+											{deploymentResponse?.program_hash ? (
+												<div className="flex items-center gap-2 mt-1">
+													<p className="text-sm text-green-700 dark:text-green-300">
+														Agent API available at:{" "}
+														<a
+															href={`https://aleph-crn.rezar.fr/vm/${deploymentResponse.program_hash}`}
+															target="_blank"
+															rel="noopener noreferrer"
+															className="underline hover:text-green-600 dark:hover:text-green-400"
+														>
+															{`https://aleph-crn.rezar.fr/vm/${deploymentResponse.program_hash}`}
+														</a>
+													</p>
+													<Button
+														type="button"
+														variant="ghost"
+														size="sm"
+														onClick={() =>
+															copyToClipboard(`https://aleph-crn.rezar.fr/vm/${deploymentResponse.program_hash}`)
+														}
+														className="h-6 w-6 p-0"
+													>
+														<Copy className="h-3 w-3" />
+													</Button>
+												</div>
+											) : (
+												<></>
+											)}
 										</div>
 									</div>
 								)}
