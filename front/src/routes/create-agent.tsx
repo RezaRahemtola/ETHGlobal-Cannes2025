@@ -75,7 +75,16 @@ function CreateAgent() {
 		contentHashSet: "pending" | "loading" | "completed";
 		allowedCallersSet: "pending" | "loading" | "completed";
 		avatarSet: "pending" | "loading" | "completed";
-	}>({ ensRegistered: "pending", contentHashSet: "pending", allowedCallersSet: "pending", avatarSet: "pending" });
+		nameSet: "pending" | "loading" | "completed";
+		descriptionSet: "pending" | "loading" | "completed";
+	}>({
+		ensRegistered: "pending",
+		contentHashSet: "pending",
+		allowedCallersSet: "pending",
+		avatarSet: "pending",
+		nameSet: "pending",
+		descriptionSet: "pending",
+	});
 
 	// Deployment progress state
 	const [deploymentProgress, setDeploymentProgress] = useState<{
@@ -363,12 +372,34 @@ function CreateAgent() {
 				setRegistrationProgress((prev) => ({ ...prev, avatarSet: "completed" }));
 			}
 
-			// Step 5: Deploy agent code
+			// Step 5: Set name
+			if (formData.name) {
+				// Wait before next transaction
+				await new Promise((resolve) => setTimeout(resolve, 1000));
+				setRegistrationProgress((prev) => ({ ...prev, nameSet: "loading" }));
+				await setName(agentAccount);
+				setRegistrationProgress((prev) => ({ ...prev, nameSet: "completed" }));
+			} else {
+				setRegistrationProgress((prev) => ({ ...prev, nameSet: "completed" }));
+			}
+
+			// Step 6: Set description
+			if (formData.description) {
+				// Wait before next transaction
+				await new Promise((resolve) => setTimeout(resolve, 1000));
+				setRegistrationProgress((prev) => ({ ...prev, descriptionSet: "loading" }));
+				await setDescription(agentAccount);
+				setRegistrationProgress((prev) => ({ ...prev, descriptionSet: "completed" }));
+			} else {
+				setRegistrationProgress((prev) => ({ ...prev, descriptionSet: "completed" }));
+			}
+
+			// Step 7: Deploy agent code
 			setDeploymentStep("deploying");
 			try {
 				const deployResponse = await deployAgentCode();
 
-				// Step 6: Set aleph_vm_hash in ENS record if deployment was successful
+				// Step 8: Set aleph_vm_hash in ENS record if deployment was successful
 				if (deployResponse?.program_hash) {
 					// Wait before next transaction
 					await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -426,7 +457,7 @@ function CreateAgent() {
 		});
 
 		// Hardcoded content hash
-		const contentHashBytes = "0xe30101701220c95cc6264e17fc8687a5a59703c2de3bf22a5b12faec21665a006a0f6a6d8e91";
+		const contentHashBytes = "0xe30101701220941a9d958cfcb840a43f5a93d10fd7f9c4c81d0666c91eeb5298e5a125be447d";
 		const node = namehash(`${formData.identifier}.elara-app.eth`);
 
 		const transaction = prepareContractCall({
@@ -499,6 +530,60 @@ function CreateAgent() {
 			contract: registryContract,
 			method: "function setText(bytes32 node, string key, string value)",
 			params: [node, "avatar", imageUrl],
+		});
+
+		const result = await sendTransaction({
+			transaction,
+			account,
+		});
+
+		await waitForReceipt({
+			client: thirdwebClient,
+			chain: base,
+			transactionHash: result.transactionHash,
+		});
+	};
+
+	const setName = async (account: Account) => {
+		const registryContract = getContract({
+			client: thirdwebClient,
+			chain: base,
+			address: env.ENS_BASE_REGISTRY_CONTRACT_ADDRESS,
+		});
+
+		const node = namehash(`${formData.identifier}.elara-app.eth`);
+
+		const transaction = prepareContractCall({
+			contract: registryContract,
+			method: "function setText(bytes32 node, string key, string value)",
+			params: [node, "name", formData.name],
+		});
+
+		const result = await sendTransaction({
+			transaction,
+			account,
+		});
+
+		await waitForReceipt({
+			client: thirdwebClient,
+			chain: base,
+			transactionHash: result.transactionHash,
+		});
+	};
+
+	const setDescription = async (account: Account) => {
+		const registryContract = getContract({
+			client: thirdwebClient,
+			chain: base,
+			address: env.ENS_BASE_REGISTRY_CONTRACT_ADDRESS,
+		});
+
+		const node = namehash(`${formData.identifier}.elara-app.eth`);
+
+		const transaction = prepareContractCall({
+			contract: registryContract,
+			method: "function setText(bytes32 node, string key, string value)",
+			params: [node, "description", formData.description],
 		});
 
 		const result = await sendTransaction({
@@ -1105,6 +1190,50 @@ function CreateAgent() {
 														}
 													>
 														Set avatar image
+													</span>
+												</div>
+											)}
+											{formData.name && (
+												<div className="flex items-center gap-2 text-sm">
+													{registrationProgress.nameSet === "completed" ? (
+														<CheckCircle className="h-4 w-4 text-green-500" />
+													) : registrationProgress.nameSet === "loading" ? (
+														<Loader2 className="h-4 w-4 animate-spin text-purple-600" />
+													) : (
+														<div className="h-4 w-4 rounded-full border-2 border-gray-300"></div>
+													)}
+													<span
+														className={
+															registrationProgress.nameSet === "completed"
+																? "text-green-700 dark:text-green-300"
+																: registrationProgress.nameSet === "loading"
+																	? "text-purple-700 dark:text-purple-300"
+																	: "text-gray-600 dark:text-gray-400"
+														}
+													>
+														Set name record
+													</span>
+												</div>
+											)}
+											{formData.description && (
+												<div className="flex items-center gap-2 text-sm">
+													{registrationProgress.descriptionSet === "completed" ? (
+														<CheckCircle className="h-4 w-4 text-green-500" />
+													) : registrationProgress.descriptionSet === "loading" ? (
+														<Loader2 className="h-4 w-4 animate-spin text-purple-600" />
+													) : (
+														<div className="h-4 w-4 rounded-full border-2 border-gray-300"></div>
+													)}
+													<span
+														className={
+															registrationProgress.descriptionSet === "completed"
+																? "text-green-700 dark:text-green-300"
+																: registrationProgress.descriptionSet === "loading"
+																	? "text-purple-700 dark:text-purple-300"
+																	: "text-gray-600 dark:text-gray-400"
+														}
+													>
+														Set description record
 													</span>
 												</div>
 											)}

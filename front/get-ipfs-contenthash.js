@@ -4,7 +4,7 @@ import { CID } from "multiformats/cid";
 const IPFS_PREFIX_HEX = "e3010170";
 
 // Your CIDv1
-const cidStr = "QmbtghwGQitzuaSUQScznYYyJEgwKH44jKGaC2zqMaSqyi";
+const cidStr = "QmYJnb3RrNwzUqJ2Knt5qDYGV69kd9cWYcLP6kuwo6BL44";
 
 try {
 	const cid = CID.parse(cidStr); // parse CIDv1

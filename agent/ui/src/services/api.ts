@@ -87,7 +87,13 @@ function initializeApiBaseUrl(): void {
 
 initializeApiBaseUrl();
 
-async function getEnsAllowedCallers(): Promise<string[]> {
+export interface AgentMetadata {
+	name: string;
+	description: string;
+	avatar: string;
+}
+
+async function getEnsTextRecord(key: string): Promise<string> {
 	try {
 		const hostname = window.location.hostname;
 
@@ -97,7 +103,7 @@ async function getEnsAllowedCallers(): Promise<string[]> {
 		} else if (hostname.includes(".eth")) {
 			ensName = hostname;
 		} else {
-			return [];
+			return "";
 		}
 
 		const subdomain = ensName.split(".")[0];
@@ -121,12 +127,23 @@ async function getEnsAllowedCallers(): Promise<string[]> {
 			],
 		});
 
-		const allowedCallersRecord = await readContract({
+		const textRecord = await readContract({
 			contract,
 			method: "text",
-			params: [ensNameToNode(fullEnsName) as `0x${string}`, "allowed_callers"],
+			params: [ensNameToNode(fullEnsName) as `0x${string}`, key],
 		});
 
+		return textRecord || "";
+	} catch (error) {
+		console.error(`Failed to get ENS text record for key ${key}:`, error);
+		return "";
+	}
+}
+
+async function getEnsAllowedCallers(): Promise<string[]> {
+	try {
+		const allowedCallersRecord = await getEnsTextRecord("allowed_callers");
+		
 		if (allowedCallersRecord) {
 			return allowedCallersRecord.split(",").map((addr: string) => addr.trim().toLowerCase());
 		}
@@ -135,6 +152,29 @@ async function getEnsAllowedCallers(): Promise<string[]> {
 	} catch (error) {
 		console.error("Failed to get allowed callers:", error);
 		return [];
+	}
+}
+
+export async function getAgentMetadata(): Promise<AgentMetadata> {
+	try {
+		const [name, description, avatar] = await Promise.all([
+			getEnsTextRecord("name"),
+			getEnsTextRecord("description"),
+			getEnsTextRecord("avatar"),
+		]);
+
+		return {
+			name: name || "AI Agent",
+			description: description || "Your AI assistant",
+			avatar: avatar || "",
+		};
+	} catch (error) {
+		console.error("Failed to get agent metadata:", error);
+		return {
+			name: "AI Agent",
+			description: "Your AI assistant",
+			avatar: "",
+		};
 	}
 }
 

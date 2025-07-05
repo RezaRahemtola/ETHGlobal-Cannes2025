@@ -54,12 +54,10 @@ function Index() {
 					<Card className="hover:shadow-lg transition-shadow">
 						<CardHeader className="text-center">
 							<Cpu className="h-12 w-12 mx-auto text-purple-600 mb-4" />
-							<CardTitle>Aleph Cloud decentralization</CardTitle>
+							<CardTitle>Decentralized compute</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<CardDescription>
-								Keep your AI agents decentralized and secure with Aleph Cloud's trusted execution environment
-							</CardDescription>
+							<CardDescription>Keep your AI agents secure with Aleph Cloud</CardDescription>
 						</CardContent>
 					</Card>
 
