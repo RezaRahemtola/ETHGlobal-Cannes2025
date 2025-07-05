@@ -260,8 +260,8 @@ function CreateAgent() {
 		const pollBalance = async () => {
 			const balance = await checkWalletBalance(walletInfo.address);
 
-			if (balance >= 0.0001) {
-				// Minimum 0.0001 ETH required
+			if (balance >= 0.00001) {
+				// Minimum 0.00001 ETH required
 				setIsCheckingBalance(false);
 				toast.success("Agent wallet funded successfully! Starting ENS registration...");
 
@@ -316,17 +316,17 @@ function CreateAgent() {
 			setRegistrationProgress((prev) => ({ ...prev, ensRegistered: "loading" }));
 			await registerENSName(agentAccount);
 			setRegistrationProgress((prev) => ({ ...prev, ensRegistered: "completed" }));
-			
+
 			// Wait before next transaction to avoid nonce issues
-			await new Promise(resolve => setTimeout(resolve, 2000));
+			await new Promise((resolve) => setTimeout(resolve, 2000));
 
 			// Step 2: Set content hash
 			setRegistrationProgress((prev) => ({ ...prev, contentHashSet: "loading" }));
 			await setContentHash(agentAccount);
 			setRegistrationProgress((prev) => ({ ...prev, contentHashSet: "completed" }));
-			
+
 			// Wait before next transaction
-			await new Promise(resolve => setTimeout(resolve, 2000));
+			await new Promise((resolve) => setTimeout(resolve, 2000));
 
 			// Step 3: Set allowed callers
 			setRegistrationProgress((prev) => ({ ...prev, allowedCallersSet: "loading" }));
@@ -336,7 +336,7 @@ function CreateAgent() {
 			// Step 4: Set avatar if profile picture exists
 			if (formData.profilePicture) {
 				// Wait before next transaction
-				await new Promise(resolve => setTimeout(resolve, 2000));
+				await new Promise((resolve) => setTimeout(resolve, 2000));
 				setRegistrationProgress((prev) => ({ ...prev, avatarSet: "loading" }));
 				await setAvatar(agentAccount);
 				setRegistrationProgress((prev) => ({ ...prev, avatarSet: "completed" }));
@@ -440,7 +440,7 @@ function CreateAgent() {
 
 		// Upload image to backend (IPFS via Pinata)
 		const uploadResponse = await uploadFileUploadPost({
-			body: { file: formData.profilePicture }
+			body: { file: formData.profilePicture },
 		});
 
 		const imageUrl = (uploadResponse.data as any).ipfs_url;
@@ -826,7 +826,7 @@ function CreateAgent() {
 										</div>
 										<div className="flex items-center gap-2 mt-4 text-sm text-orange-700 dark:text-orange-300">
 											<AlertCircle className="h-4 w-4" />
-											<span>Minimum 0.0001 ETH required. We're monitoring the balance automatically.</span>
+											<span>Minimum 0.00001 ETH required. We're monitoring the balance automatically.</span>
 										</div>
 									</div>
 								)}
