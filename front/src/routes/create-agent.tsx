@@ -32,6 +32,7 @@ import { base } from "thirdweb/chains";
 import { eth_getBalance, getRpcClient } from "thirdweb/rpc";
 import { encodePacked, keccak256 } from "thirdweb/utils";
 import { getContract, prepareContractCall, sendTransaction, waitForReceipt } from "thirdweb";
+import { uploadFileUploadPost } from "@/apis/backend/sdk.gen";
 
 export const Route = createFileRoute("/create-agent")({
 	component: CreateAgent,
@@ -69,7 +70,8 @@ function CreateAgent() {
 		ensRegistered: "pending" | "loading" | "completed";
 		contentHashSet: "pending" | "loading" | "completed";
 		allowedCallersSet: "pending" | "loading" | "completed";
-	}>({ ensRegistered: "pending", contentHashSet: "pending", allowedCallersSet: "pending" });
+		avatarSet: "pending" | "loading" | "completed";
+	}>({ ensRegistered: "pending", contentHashSet: "pending", allowedCallersSet: "pending", avatarSet: "pending" });
 
 	useEffect(() => {
 		if (!isConnected) {
@@ -314,16 +316,33 @@ function CreateAgent() {
 			setRegistrationProgress((prev) => ({ ...prev, ensRegistered: "loading" }));
 			await registerENSName(agentAccount);
 			setRegistrationProgress((prev) => ({ ...prev, ensRegistered: "completed" }));
+			
+			// Wait before next transaction to avoid nonce issues
+			await new Promise(resolve => setTimeout(resolve, 2000));
 
 			// Step 2: Set content hash
 			setRegistrationProgress((prev) => ({ ...prev, contentHashSet: "loading" }));
 			await setContentHash(agentAccount);
 			setRegistrationProgress((prev) => ({ ...prev, contentHashSet: "completed" }));
+			
+			// Wait before next transaction
+			await new Promise(resolve => setTimeout(resolve, 2000));
 
 			// Step 3: Set allowed callers
 			setRegistrationProgress((prev) => ({ ...prev, allowedCallersSet: "loading" }));
 			await setAllowedCallers(agentAccount);
 			setRegistrationProgress((prev) => ({ ...prev, allowedCallersSet: "completed" }));
+
+			// Step 4: Set avatar if profile picture exists
+			if (formData.profilePicture) {
+				// Wait before next transaction
+				await new Promise(resolve => setTimeout(resolve, 2000));
+				setRegistrationProgress((prev) => ({ ...prev, avatarSet: "loading" }));
+				await setAvatar(agentAccount);
+				setRegistrationProgress((prev) => ({ ...prev, avatarSet: "completed" }));
+			} else {
+				setRegistrationProgress((prev) => ({ ...prev, avatarSet: "completed" }));
+			}
 
 			setDeploymentStep("deployed");
 		} catch (error) {
@@ -387,7 +406,7 @@ function CreateAgent() {
 		});
 	};
 
-	const setAllowedCallers = async (account: any) => {
+	const setAllowedCallers = async (account: Account) => {
 		const registryContract = getContract({
 			client: thirdwebClient,
 			chain: base,
@@ -402,6 +421,43 @@ function CreateAgent() {
 			contract: registryContract,
 			method: "function setText(bytes32 node, string key, string value)",
 			params: [node, "allowed_callers", allowedCallersData],
+		});
+
+		const result = await sendTransaction({
+			transaction,
+			account,
+		});
+
+		await waitForReceipt({
+			client: thirdwebClient,
+			chain: base,
+			transactionHash: result.transactionHash,
+		});
+	};
+
+	const setAvatar = async (account: Account) => {
+		if (!formData.profilePicture) return;
+
+		// Upload image to backend (IPFS via Pinata)
+		const uploadResponse = await uploadFileUploadPost({
+			body: { file: formData.profilePicture }
+		});
+
+		const imageUrl = (uploadResponse.data as any).ipfs_url;
+
+		// Set avatar in ENS registry
+		const registryContract = getContract({
+			client: thirdwebClient,
+			chain: base,
+			address: env.ENS_BASE_REGISTRY_CONTRACT_ADDRESS,
+		});
+
+		const node = namehash(`${formData.identifier}.elara-app.eth`);
+
+		const transaction = prepareContractCall({
+			contract: registryContract,
+			method: "function setText(bytes32 node, string key, string value)",
+			params: [node, "avatar", imageUrl],
 		});
 
 		const result = await sendTransaction({
@@ -847,6 +903,28 @@ function CreateAgent() {
 													Set allowed callers record
 												</span>
 											</div>
+											{formData.profilePicture && (
+												<div className="flex items-center gap-2 text-sm">
+													{registrationProgress.avatarSet === "completed" ? (
+														<CheckCircle className="h-4 w-4 text-green-500" />
+													) : registrationProgress.avatarSet === "loading" ? (
+														<Loader2 className="h-4 w-4 animate-spin text-purple-600" />
+													) : (
+														<div className="h-4 w-4 rounded-full border-2 border-gray-300"></div>
+													)}
+													<span
+														className={
+															registrationProgress.avatarSet === "completed"
+																? "text-green-700 dark:text-green-300"
+																: registrationProgress.avatarSet === "loading"
+																	? "text-purple-700 dark:text-purple-300"
+																	: "text-gray-600 dark:text-gray-400"
+														}
+													>
+														Set avatar image
+													</span>
+												</div>
+											)}
 										</div>
 									</div>
 								)}

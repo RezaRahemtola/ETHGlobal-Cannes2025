@@ -9,9 +9,12 @@
     "preview": "vite preview",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write '**/*.{ts,tsx}'"
+    "format": "prettier --write '**/*.{ts,tsx}'",
+    "generate-clients": "npm run generate-backend-client",
+    "generate-backend-client": "openapi-ts --input http://localhost:8000/openapi.json --output ./src/apis/backend --client @hey-api/client-axios"
   },
   "dependencies": {
+    "@hey-api/client-axios": "^0.7.0",
     "@hookform/resolvers": "^5.1.1",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-label": "^2.1.7",
@@ -37,6 +40,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.23.0",
+    "@hey-api/openapi-ts": "^0.66.3",
     "@tanstack/react-router-devtools": "^1.114.34",
     "@tanstack/router-plugin": "^1.114.34",
     "@types/node": "^22.14.0",
