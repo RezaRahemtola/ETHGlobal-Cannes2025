@@ -55,7 +55,7 @@ class ElaraMiddleware(BaseHTTPMiddleware):
         try:
             # Perform validation
             if not await self._validate_request(request):
-                return HTTPException(
+                raise HTTPException(
                     status_code=HTTPStatus.FORBIDDEN,
                     detail="Elara validation failed, access denied",
                 )
@@ -65,7 +65,7 @@ class ElaraMiddleware(BaseHTTPMiddleware):
             return response
 
         except Exception as e:
-            return HTTPException(
+            raise HTTPException(
                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
                 detail=f"Internal Elara middleware error: {e}",
             )

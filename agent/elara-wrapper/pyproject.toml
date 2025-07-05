@@ -1,6 +1,6 @@
 [project]
 name = "elara-wrapper"
-version = "0.0.6"
+version = "0.0.10"
 description = "A FastAPI middleware package to validate requests to Elara agents based on the permissions set in their ENS name."
 authors = []
 readme = "README.md"
@@ -8,7 +8,8 @@ requires-python = ">=3.11,<4.0"
 dependencies = [
     "fastapi[standard] (>=0.115.14,<0.116.0)",
     "pydantic (>=2.11.7,<3.0.0)",
-    "web3 (>=7.12.0,<8.0.0)"
+    "web3 (>=7.12.0,<8.0.0)",
+    "libertai-agents (==0.2.0a1)"
 ]
 
 

@@ -1,3 +1,4 @@
+from libertai_agents.interfaces.messages import Message
 from pydantic import BaseModel, field_validator
 from web3 import Web3
 
@@ -7,7 +8,7 @@ class GeneratePostRequestBody(BaseModel):
     Request body for a generation request
     """
 
-    prompt: str
+    messages: list[Message]
     address: str
     signature: str
 
