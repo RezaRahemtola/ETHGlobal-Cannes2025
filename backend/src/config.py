@@ -6,10 +6,12 @@ from dotenv import load_dotenv
 
 class _Config:
     IS_DEVELOPMENT: bool
+    PINATA_JWT: str
 
     def __init__(self):
         load_dotenv()
         self.IS_DEVELOPMENT = os.getenv("IS_DEVELOPMENT", "False").lower() == "true"
+        self.PINATA_JWT = os.getenv("PINATA_JWT", "")
 
         # Configure logging
         log_level_str = os.getenv("LOG_LEVEL", "INFO").upper()
