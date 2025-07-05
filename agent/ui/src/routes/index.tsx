@@ -56,9 +56,10 @@ function Index() {
 			aiResponse.forEach((msg) => addMessage(msg));
 		} catch (error) {
 			console.error("Failed to get AI response:", error);
+			const errorMessage = error instanceof Error ? error.message : "Sorry, I encountered an error. Please try again.";
 			addMessage({
 				role: "assistant",
-				content: "Sorry, I encountered an error. Please try again.",
+				content: errorMessage,
 			});
 		} finally {
 			setLoading(false);

@@ -15,9 +15,11 @@ export async function generateResponse(messages: Message[], address: string, sig
 		}),
 	});
 
+	const data = await response.json();
+	
 	if (!response.ok) {
-		throw new Error("Failed to generate response");
+		throw new Error(data.detail || data.message || data.error || `Request failed with status ${response.status}`);
 	}
 
-	return response.json();
+	return data;
 }

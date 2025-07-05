@@ -5,7 +5,7 @@ import { useActiveAccount, useActiveWallet } from "thirdweb/react";
 export const WalletSync = () => {
   const account = useActiveAccount();
   const wallet = useActiveWallet();
-  const { connect, disconnect } = useWalletStore();
+  const { connect, disconnect, address, setSignature } = useWalletStore();
 
   useEffect(() => {
     if (account) {
@@ -17,6 +17,10 @@ export const WalletSync = () => {
 
   wallet?.subscribe("accountChanged", (account) => {
     if (account) {
+      // If wallet address changed, clear signature to force re-signing
+      if (address && address !== account.address) {
+        setSignature("");
+      }
       connect(account.address);
     } else {
       disconnect();
