@@ -87,7 +87,64 @@ function initializeApiBaseUrl(): void {
 
 initializeApiBaseUrl();
 
+async function getEnsAllowedCallers(): Promise<string[]> {
+	try {
+		const hostname = window.location.hostname;
+
+		let ensName: string;
+		if (hostname.includes(".eth.limo")) {
+			ensName = hostname.replace(".eth.limo", "");
+		} else if (hostname.includes(".eth")) {
+			ensName = hostname;
+		} else {
+			return [];
+		}
+
+		const subdomain = ensName.split(".")[0];
+		const fullEnsName = `${subdomain}.elara-app.eth`;
+
+		const contract = getContract({
+			client: thirdwebClient,
+			chain: base,
+			address: ENS_REGISTRY_ADDRESS,
+			abi: [
+				{
+					inputs: [
+						{ name: "node", type: "bytes32" },
+						{ name: "key", type: "string" },
+					],
+					name: "text",
+					outputs: [{ name: "", type: "string" }],
+					stateMutability: "view",
+					type: "function",
+				},
+			],
+		});
+
+		const allowedCallersRecord = await readContract({
+			contract,
+			method: "text",
+			params: [ensNameToNode(fullEnsName) as `0x${string}`, "allowed_callers"],
+		});
+
+		if (allowedCallersRecord) {
+			return allowedCallersRecord.split(",").map((addr: string) => addr.trim().toLowerCase());
+		}
+
+		return [];
+	} catch (error) {
+		console.error("Failed to get allowed callers:", error);
+		return [];
+	}
+}
+
 export async function generateResponse(messages: Message[], address: string, signature: string): Promise<Message[]> {
+	const allowedCallers = await getEnsAllowedCallers();
+
+	if (allowedCallers.length > 0 && !allowedCallers.includes(address.toLowerCase())) {
+		throw new Error("Address not authorized to access this agent. Please check with the agent owner.");
+	}
+
 	const apiBaseUrl = cachedApiBaseUrl || (await apiBaseUrlPromise) || "http://localhost:8000";
 	const response = await fetch(`${apiBaseUrl}/generate`, {
 		method: "POST",

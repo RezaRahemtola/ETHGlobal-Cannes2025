@@ -726,14 +726,14 @@ wmi = ["wmi (>=1.5.1)"]
 
 [[package]]
 name = "elara-wrapper"
-version = "0.0.12"
+version = "0.0.18"
 description = "A FastAPI middleware package to validate requests to Elara agents based on the permissions set in their ENS name."
 optional = false
 python-versions = "<4.0,>=3.11"
 groups = ["main"]
 files = [
-    {file = "elara_wrapper-0.0.12-py3-none-any.whl", hash = "sha256:8c9292025dea8075a6d512e360b70a6ad38e45cdc44028fc56ca63852ac72eff"},
-    {file = "elara_wrapper-0.0.12.tar.gz", hash = "sha256:83d2d1b104094e5375f0ca9767a5318ab8e5eb071d62195014e44ee379117124"},
+    {file = "elara_wrapper-0.0.18-py3-none-any.whl", hash = "sha256:8a932327c4dd174be4c01dc83465905b6d2f556f4562f67f9348a267f6b4ad07"},
+    {file = "elara_wrapper-0.0.18.tar.gz", hash = "sha256:5789321b112b91b9a1466c1db5474bb9e1092b208fe86b0c029bfb11d9c3f074"},
 ]
 
 [package.dependencies]
@@ -3186,4 +3186,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<=3.13"
-content-hash = "5a16a7fcc923554a66d97dc12a20569d035327849067885306ec76a6a6b2796a"
+content-hash = "0d03e767cfc9cca0be77c4566d7f2bbbce61adf84f8b0eed2aa77e4ff9a399e7"

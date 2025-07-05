@@ -95,9 +95,10 @@ async def deploy_program(
                 program_result, status = await client.create_program(
                     program_ref=store_message.item_hash,
                     entrypoint="run",
-                    runtime="ec3849e32bc8e6ef9e7645ad09820ad4ccc7ff39e5cf96495181e54b21a1ff34",
+                    runtime="a0b21260515627192ff0862608be49cd71063b9c7d6d503410a913a3be515730",
                     memory=4000,
                     vcpus=2,
+                    timeout_seconds=60,
                     persistent=True,
                     environment_variables=env_vars,
                     metadata={

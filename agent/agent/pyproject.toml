@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "agent using crewAI"
 authors = [{ name = "Your Name", email = "you@example.com" }]
 requires-python = ">=3.11,<=3.13"
-dependencies = ["elara-wrapper (>=0.0.12)", "libertai-agents (==0.2.0a1)"]
+dependencies = ["elara-wrapper (>=0.0.18)", "libertai-agents (==0.2.0a1)"]
 
 [project.scripts]
 agent = "agent.main:run"

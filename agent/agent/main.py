@@ -3,9 +3,7 @@ from http import HTTPStatus
 
 from dotenv import load_dotenv
 from elara_wrapper import (
-    elara_auth_router,
     GeneratePostRequestBody,
-    add_elara_middleware,
 )
 from fastapi import FastAPI, HTTPException
 from libertai_agents.agents import Agent
@@ -38,18 +36,21 @@ agent = Agent(
     expose_api=False,
 )
 
+ens_subname = os.getenv("ELARA_ENS_SUBNAME")
+
 app = FastAPI()
 
-# Add the Elara middleware & auth router
-add_elara_middleware(app, os.getenv("ELARA_ENS_SUBNAME"))
-app.include_router(elara_auth_router)
-
+# Add CORS middleware first
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173"]
+    + [f"https://{ens_subname}.elara-app.eth.limo"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add the Elara middleware
+# app.add_middleware(ElaraMiddleware, ens_name=os.getenv("ELARA_ENS_SUBNAME"))
 
 
 @app.post("/generate")

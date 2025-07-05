@@ -5,7 +5,7 @@ Elara FastAPI Middleware for request validation
 from http import HTTPStatus
 
 from eth_account.messages import encode_defunct
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from hexbytes import HexBytes
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -120,6 +120,9 @@ class ElaraMiddleware(BaseHTTPMiddleware):
         Returns:
             Response or error
         """
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         try:
             # Perform validation
             validation_result = await self._validate_request(request)
@@ -200,19 +203,3 @@ class ElaraMiddleware(BaseHTTPMiddleware):
             )
 
         return True
-
-
-def add_elara_middleware(app: FastAPI, ens_name: str) -> ElaraMiddleware:
-    """
-    Add Elara middleware to a FastAPI application
-
-    Args:
-        app: FastAPI application instance
-        ens_name: ENS subdomain to use for validation (e.g., "test" for "test.elara-app.eth")
-
-    Returns:
-        ElaraMiddleware instance for further configuration
-    """
-    middleware = ElaraMiddleware(app, ens_name)
-    app.add_middleware(ElaraMiddleware, ens_name=ens_name)
-    return middleware

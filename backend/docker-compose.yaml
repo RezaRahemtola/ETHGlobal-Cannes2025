@@ -6,6 +6,6 @@ services:
     container_name: elara-backend
     restart: always
     ports:
-      - "8085:8000"
+      - "50003:8000"
     env_file:
       - .env

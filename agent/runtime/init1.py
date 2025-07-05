@@ -389,7 +389,7 @@ async def run_executable_http(scope: dict) -> tuple[dict, dict, str, bytes | Non
     headers = None
     body = None
 
-    timeout = aiohttp.ClientTimeout(total=5)
+    timeout = aiohttp.ClientTimeout(total=60)
     async with aiohttp.ClientSession(timeout=timeout) as session:
         while not body:
             try:
