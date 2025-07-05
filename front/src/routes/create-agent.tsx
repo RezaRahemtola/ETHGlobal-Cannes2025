@@ -453,7 +453,7 @@ function CreateAgent() {
 
 		const node = namehash(`${formData.identifier}.elara-app.eth`);
 		const allowedAddresses = getAllAuthorizedAddresses();
-		const allowedCallersData = JSON.stringify(allowedAddresses);
+		const allowedCallersData = allowedAddresses.join(",");
 
 		const transaction = prepareContractCall({
 			contract: registryContract,

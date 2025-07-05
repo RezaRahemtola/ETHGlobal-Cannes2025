@@ -1,0 +1,23 @@
+import { Message } from "@/types/chat";
+
+const API_BASE_URL = "http://localhost:8000";
+
+export async function generateResponse(messages: Message[], address: string, signature: string): Promise<Message[]> {
+	const response = await fetch(`${API_BASE_URL}/generate`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			messages,
+			address,
+			signature,
+		}),
+	});
+
+	if (!response.ok) {
+		throw new Error("Failed to generate response");
+	}
+
+	return response.json();
+}
