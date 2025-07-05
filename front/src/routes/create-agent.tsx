@@ -26,11 +26,12 @@ import { checkENSAvailability, type ENSAvailabilityResult } from "@/utils/ensAva
 import { ENS_CONFIG, validateENSName } from "@/config/ens";
 import env from "@/config/env";
 import { useActiveWallet } from "thirdweb/react";
-import { privateKeyToAccount } from "thirdweb/wallets";
+import { Account, privateKeyToAccount } from "thirdweb/wallets";
 import { thirdwebClient } from "@/config/thirdweb";
 import { base } from "thirdweb/chains";
 import { eth_getBalance, getRpcClient } from "thirdweb/rpc";
-import { keccak256 } from "thirdweb/utils";
+import { encodePacked, keccak256 } from "thirdweb/utils";
+import { getContract, prepareContractCall, sendTransaction, waitForReceipt } from "thirdweb";
 
 export const Route = createFileRoute("/create-agent")({
 	component: CreateAgent,
@@ -58,10 +59,17 @@ function CreateAgent() {
 
 	// Deployment state
 	const [isDeploying, setIsDeploying] = useState(false);
-	const [deploymentStep, setDeploymentStep] = useState<"form" | "signing" | "funding" | "deployed">("form");
+	const [deploymentStep, setDeploymentStep] = useState<"form" | "signing" | "funding" | "registering" | "deployed">(
+		"form",
+	);
 	const [agentWallet, setAgentWallet] = useState<{ address: string; privateKey: string } | null>(null);
 	const [isCheckingBalance, setIsCheckingBalance] = useState(false);
 	const [walletBalance, setWalletBalance] = useState<string>("0");
+	const [registrationProgress, setRegistrationProgress] = useState<{
+		ensRegistered: "pending" | "loading" | "completed";
+		contentHashSet: "pending" | "loading" | "completed";
+		allowedCallersSet: "pending" | "loading" | "completed";
+	}>({ ensRegistered: "pending", contentHashSet: "pending", allowedCallersSet: "pending" });
 
 	useEffect(() => {
 		if (!isConnected) {
@@ -216,7 +224,7 @@ function CreateAgent() {
 			toast.success("Agent wallet created successfully!");
 
 			// Start checking balance
-			startBalancePolling(walletInfo.address);
+			startBalancePolling(walletInfo);
 
 			return walletInfo;
 		} catch (error) {
@@ -244,17 +252,27 @@ function CreateAgent() {
 		}
 	};
 
-	const startBalancePolling = async (walletAddress: string) => {
+	const startBalancePolling = async (walletInfo: { address: string; privateKey: `0x${string}` }) => {
 		setIsCheckingBalance(true);
 
 		const pollBalance = async () => {
-			const balance = await checkWalletBalance(walletAddress);
+			const balance = await checkWalletBalance(walletInfo.address);
 
 			if (balance >= 0.0001) {
 				// Minimum 0.0001 ETH required
 				setIsCheckingBalance(false);
-				setDeploymentStep("deployed");
-				toast.success("Agent wallet funded successfully! Ready for deployment.");
+				toast.success("Agent wallet funded successfully! Starting ENS registration...");
+
+				// Start ENS registration process
+				try {
+					await registerENSAndSetRecords(walletInfo);
+				} catch (error) {
+					console.error("ENS registration failed:", error);
+					toast.error(`ENS registration failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+					setDeploymentStep("funding");
+					setIsCheckingBalance(true);
+					setTimeout(pollBalance, 3000); // Continue polling
+				}
 				return true;
 			}
 
@@ -268,6 +286,134 @@ function CreateAgent() {
 	const copyToClipboard = (text: string) => {
 		navigator.clipboard.writeText(text);
 		toast.success("Copied to clipboard!");
+	};
+
+	// Manual namehash implementation since it's not available in thirdweb/utils
+	const namehash = (name: string): `0x${string}` => {
+		let node = "0x0000000000000000000000000000000000000000000000000000000000000000";
+		if (name) {
+			const labels = name.split(".");
+			for (let i = labels.length - 1; i >= 0; i--) {
+				const labelHash = keccak256(encodePacked(["string"], [labels[i]]));
+				node = keccak256(encodePacked(["bytes32", "bytes32"], [node as `0x${string}`, labelHash]));
+			}
+		}
+		return node as `0x${string}`;
+	};
+
+	const registerENSAndSetRecords = async (walletInfo: { address: string; privateKey: `0x${string}` }) => {
+		setDeploymentStep("registering");
+
+		try {
+			const agentAccount = privateKeyToAccount({
+				client: thirdwebClient,
+				privateKey: walletInfo.privateKey,
+			});
+
+			// Step 1: Register ENS name
+			setRegistrationProgress((prev) => ({ ...prev, ensRegistered: "loading" }));
+			await registerENSName(agentAccount);
+			setRegistrationProgress((prev) => ({ ...prev, ensRegistered: "completed" }));
+
+			// Step 2: Set content hash
+			setRegistrationProgress((prev) => ({ ...prev, contentHashSet: "loading" }));
+			await setContentHash(agentAccount);
+			setRegistrationProgress((prev) => ({ ...prev, contentHashSet: "completed" }));
+
+			// Step 3: Set allowed callers
+			setRegistrationProgress((prev) => ({ ...prev, allowedCallersSet: "loading" }));
+			await setAllowedCallers(agentAccount);
+			setRegistrationProgress((prev) => ({ ...prev, allowedCallersSet: "completed" }));
+
+			setDeploymentStep("deployed");
+		} catch (error) {
+			console.error("Error during ENS registration:", error);
+			throw error;
+		}
+	};
+
+	const registerENSName = async (account: Account) => {
+		const registrarContract = getContract({
+			client: thirdwebClient,
+			chain: base,
+			address: env.ENS_BASE_REGISTRAR_CONTRACT_ADDRESS,
+		});
+
+		// Register the name using the correct ABI
+		const transaction = prepareContractCall({
+			contract: registrarContract,
+			method: "function register(string label, address owner)",
+			params: [formData.identifier, account.address],
+		});
+
+		const result = await sendTransaction({
+			transaction,
+			account,
+		});
+
+		await waitForReceipt({
+			client: thirdwebClient,
+			chain: base,
+			transactionHash: result.transactionHash,
+		});
+	};
+
+	const setContentHash = async (account: Account) => {
+		const registryContract = getContract({
+			client: thirdwebClient,
+			chain: base,
+			address: env.ENS_BASE_REGISTRY_CONTRACT_ADDRESS,
+		});
+
+		// Hardcoded content hash
+		const contentHashBytes = "0xe3010170122029f2d17be6139079dc48696d1f582a8530eb9805b561eda517e22a892c7e3f1f";
+		const node = namehash(`${formData.identifier}.elara-app.eth`);
+
+		const transaction = prepareContractCall({
+			contract: registryContract,
+			method: "function setContenthash(bytes32 node, bytes contenthash)",
+			params: [node, contentHashBytes],
+		});
+
+		const result = await sendTransaction({
+			transaction,
+			account,
+		});
+
+		await waitForReceipt({
+			client: thirdwebClient,
+			chain: base,
+			transactionHash: result.transactionHash,
+		});
+	};
+
+	const setAllowedCallers = async (account: any) => {
+		const registryContract = getContract({
+			client: thirdwebClient,
+			chain: base,
+			address: env.ENS_BASE_REGISTRY_CONTRACT_ADDRESS,
+		});
+
+		const node = namehash(`${formData.identifier}.elara-app.eth`);
+		const allowedAddresses = getAllAuthorizedAddresses();
+		const allowedCallersData = JSON.stringify(allowedAddresses);
+
+		const transaction = prepareContractCall({
+			contract: registryContract,
+			method: "function setText(bytes32 node, string key, string value)",
+			params: [node, "allowed_callers", allowedCallersData],
+		});
+
+		const result = await sendTransaction({
+			transaction,
+			account,
+		});
+
+		await waitForReceipt({
+			client: thirdwebClient,
+			chain: base,
+			transactionHash: result.transactionHash,
+		});
 	};
 
 	return (
@@ -625,6 +771,82 @@ function CreateAgent() {
 										<div className="flex items-center gap-2 mt-4 text-sm text-orange-700 dark:text-orange-300">
 											<AlertCircle className="h-4 w-4" />
 											<span>Minimum 0.0001 ETH required. We're monitoring the balance automatically.</span>
+										</div>
+									</div>
+								)}
+
+								{deploymentStep === "registering" && (
+									<div className="bg-purple-50 dark:bg-purple-900/20 p-6 rounded-lg">
+										<div className="flex items-center gap-3 mb-4">
+											<Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+											<h3 className="font-semibold text-purple-900 dark:text-purple-100">
+												Registering ENS & Setting Records
+											</h3>
+										</div>
+										<p className="text-sm text-purple-800 dark:text-purple-200 mb-4">
+											Registering your ENS name and configuring records on Base network...
+										</p>
+										<div className="space-y-2">
+											<div className="flex items-center gap-2 text-sm">
+												{registrationProgress.ensRegistered === "completed" ? (
+													<CheckCircle className="h-4 w-4 text-green-500" />
+												) : registrationProgress.ensRegistered === "loading" ? (
+													<Loader2 className="h-4 w-4 animate-spin text-purple-600" />
+												) : (
+													<div className="h-4 w-4 rounded-full border-2 border-gray-300"></div>
+												)}
+												<span
+													className={
+														registrationProgress.ensRegistered === "completed"
+															? "text-green-700 dark:text-green-300"
+															: registrationProgress.ensRegistered === "loading"
+																? "text-purple-700 dark:text-purple-300"
+																: "text-gray-600 dark:text-gray-400"
+													}
+												>
+													Register ENS name: {formData.identifier}.elara-app.eth
+												</span>
+											</div>
+											<div className="flex items-center gap-2 text-sm">
+												{registrationProgress.contentHashSet === "completed" ? (
+													<CheckCircle className="h-4 w-4 text-green-500" />
+												) : registrationProgress.contentHashSet === "loading" ? (
+													<Loader2 className="h-4 w-4 animate-spin text-purple-600" />
+												) : (
+													<div className="h-4 w-4 rounded-full border-2 border-gray-300"></div>
+												)}
+												<span
+													className={
+														registrationProgress.contentHashSet === "completed"
+															? "text-green-700 dark:text-green-300"
+															: registrationProgress.contentHashSet === "loading"
+																? "text-purple-700 dark:text-purple-300"
+																: "text-gray-600 dark:text-gray-400"
+													}
+												>
+													Set content hash
+												</span>
+											</div>
+											<div className="flex items-center gap-2 text-sm">
+												{registrationProgress.allowedCallersSet === "completed" ? (
+													<CheckCircle className="h-4 w-4 text-green-500" />
+												) : registrationProgress.allowedCallersSet === "loading" ? (
+													<Loader2 className="h-4 w-4 animate-spin text-purple-600" />
+												) : (
+													<div className="h-4 w-4 rounded-full border-2 border-gray-300"></div>
+												)}
+												<span
+													className={
+														registrationProgress.allowedCallersSet === "completed"
+															? "text-green-700 dark:text-green-300"
+															: registrationProgress.allowedCallersSet === "loading"
+																? "text-purple-700 dark:text-purple-300"
+																: "text-gray-600 dark:text-gray-400"
+													}
+												>
+													Set allowed callers record
+												</span>
+											</div>
 										</div>
 									</div>
 								)}
