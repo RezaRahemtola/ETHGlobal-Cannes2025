@@ -465,7 +465,7 @@ function CreateAgent() {
 			body: { file: formData.profilePicture },
 		});
 
-		const imageUrl = (uploadResponse.data as any).ipfs_url;
+		const imageUrl = (uploadResponse.data as { ipfs_url: string }).ipfs_url;
 
 		// Set avatar in ENS registry
 		const registryContract = getContract({
