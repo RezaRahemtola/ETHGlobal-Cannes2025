@@ -593,7 +593,7 @@ function CreateAgent() {
 				<div className="text-center mb-12">
 					<h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">Create Your AI Agent</h1>
 					<p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-						Configure your intelligent AI agent with ENS identity and Oasis privacy features
+						Configure your intelligent AI agent with ENS identity
 					</p>
 				</div>
 
@@ -786,7 +786,7 @@ function CreateAgent() {
 									</Button>
 								</div>
 								<p className="text-sm text-muted-foreground">
-									These variables will be encrypted and securely stored on-chain with Oasis privacy features.
+									These variables will be securely transferred to your agent's environment.
 								</p>
 								<div className="space-y-3">
 									{/* Immutable environment variables */}
@@ -928,22 +928,22 @@ function CreateAgent() {
 									<div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
 										<Sparkles className="h-6 w-6 text-blue-600" />
 										<div>
-											<h3 className="font-semibold text-sm">AI Powered</h3>
-											<p className="text-xs text-muted-foreground">Advanced reasoning</p>
+											<h3 className="font-semibold text-sm">Decentralized AI</h3>
+											<p className="text-xs text-muted-foreground">Staying out of big tech's control</p>
 										</div>
 									</div>
 									<div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
 										<Globe className="h-6 w-6 text-green-600" />
 										<div>
 											<h3 className="font-semibold text-sm">ENS Identity</h3>
-											<p className="text-xs text-muted-foreground">Permanent identity</p>
+											<p className="text-xs text-muted-foreground">Permanent identity for each agent</p>
 										</div>
 									</div>
 									<div className="flex items-center gap-3 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
 										<Shield className="h-6 w-6 text-purple-600" />
 										<div>
-											<h3 className="font-semibold text-sm">Oasis Privacy</h3>
-											<p className="text-xs text-muted-foreground">Secure computing</p>
+											<h3 className="font-semibold text-sm">Full ownership</h3>
+											<p className="text-xs text-muted-foreground">You & only you control the agent</p>
 										</div>
 									</div>
 								</div>

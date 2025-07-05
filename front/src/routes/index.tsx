@@ -15,11 +15,11 @@ function Index() {
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 				<div className="text-center mb-16">
 					<h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
-						Deploy AI Agents with <span className="text-blue-600">ENS & Oasis ROFL</span>
+						Deploy AI Agents with <span className="text-blue-600">ENS & Aleph Cloud</span>
 					</h1>
 					<p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">
-						Easily deploy AI agents with human-readable ENS domains, restricted permissions, and Oasis ROFL TEE for
-						secure computation with local models.
+						Easily deploy AI agents with human-readable ENS domains, restricted permissions, and Aleph Cloud for
+						decentralized secure computation.
 					</p>
 					{!isConnected && (
 						<div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 max-w-md mx-auto">
@@ -36,7 +36,7 @@ function Index() {
 						</CardHeader>
 						<CardContent>
 							<CardDescription>
-								Access your AI agents through human-readable ENS domains like myagent.eth
+								Access your AI agents through human-readable ENS domains like myagent.elara-app.eth
 							</CardDescription>
 						</CardContent>
 					</Card>
@@ -47,18 +47,18 @@ function Index() {
 							<CardTitle>Restricted Permissions</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<CardDescription>Fine-grained control over what your AI agents can access and do</CardDescription>
+							<CardDescription>Fine-grained control over who can interact with you AI Agent</CardDescription>
 						</CardContent>
 					</Card>
 
 					<Card className="hover:shadow-lg transition-shadow">
 						<CardHeader className="text-center">
 							<Cpu className="h-12 w-12 mx-auto text-purple-600 mb-4" />
-							<CardTitle>Oasis ROFL TEE</CardTitle>
+							<CardTitle>Aleph Cloud decentralization</CardTitle>
 						</CardHeader>
 						<CardContent>
 							<CardDescription>
-								Run your AI agents in secure Trusted Execution Environments with local models
+								Keep your AI agents decentralized and secure with Aleph Cloud's trusted execution environment
 							</CardDescription>
 						</CardContent>
 					</Card>
@@ -69,7 +69,7 @@ function Index() {
 							<CardTitle>Easy Deployment</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<CardDescription>Deploy your AI agents in minutes with our simple interface</CardDescription>
+							<CardDescription>Deploy your AI agents in a few clicks with our simple interface</CardDescription>
 						</CardContent>
 					</Card>
 				</div>
@@ -83,9 +83,7 @@ function Index() {
 									<span className="text-2xl font-bold text-blue-600">1</span>
 								</div>
 								<h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Connect Wallet</h3>
-								<p className="text-gray-600 dark:text-gray-300">
-									Connect your Web3 wallet to get started with agent creation
-								</p>
+								<p className="text-gray-600 dark:text-gray-300">Connect your wallet to get started</p>
 							</div>
 							<div className="text-center">
 								<div className="bg-green-100 dark:bg-green-900/30 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
@@ -100,9 +98,9 @@ function Index() {
 								<div className="bg-purple-100 dark:bg-purple-900/30 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
 									<span className="text-2xl font-bold text-purple-600">3</span>
 								</div>
-								<h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Deploy to TEE</h3>
+								<h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Deploy to Aleph</h3>
 								<p className="text-gray-600 dark:text-gray-300">
-									Deploy your agent to Oasis ROFL TEE for secure, private execution
+									Deploy your agent to Aleph Cloud for secure, decentralized execution
 								</p>
 							</div>
 						</div>
