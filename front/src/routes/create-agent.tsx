@@ -4,20 +4,42 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useWalletStore } from "@/stores/wallet";
-import { Bot, Globe, Shield, Sparkles, Plus, X, Upload, User, CheckCircle, XCircle, Loader2 } from "lucide-react";
-import { FormEvent, useEffect, useState, useCallback } from "react";
+import {
+	AlertCircle,
+	Bot,
+	CheckCircle,
+	Copy,
+	Globe,
+	Loader2,
+	Plus,
+	Shield,
+	Sparkles,
+	Upload,
+	User,
+	Wallet,
+	X,
+	XCircle,
+} from "lucide-react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { checkENSAvailability, type ENSAvailabilityResult } from "@/utils/ensAvailability";
-import { validateENSName, ENS_CONFIG } from "@/config/ens";
+import { ENS_CONFIG, validateENSName } from "@/config/ens";
 import env from "@/config/env";
+import { useActiveWallet } from "thirdweb/react";
+import { privateKeyToAccount } from "thirdweb/wallets";
+import { thirdwebClient } from "@/config/thirdweb";
+import { base } from "thirdweb/chains";
+import { eth_getBalance, getRpcClient } from "thirdweb/rpc";
+import { keccak256 } from "thirdweb/utils";
 
 export const Route = createFileRoute("/create-agent")({
 	component: CreateAgent,
 });
 
 function CreateAgent() {
-	const { isConnected } = useWalletStore();
+	const { isConnected, address } = useWalletStore();
 	const router = useRouter();
+	const activeWallet = useActiveWallet();
 	const [formData, setFormData] = useState({
 		name: "",
 		description: "",
@@ -25,14 +47,21 @@ function CreateAgent() {
 		profilePicture: null as File | null,
 	});
 
-	const [envVars, setEnvVars] = useState<{ key: string; value: string }[]>([
-		{ key: "", value: "" }
-	]);
+	const [envVars, setEnvVars] = useState<{ key: string; value: string }[]>([{ key: "", value: "" }]);
+
+	const [authorizedAddresses, setAuthorizedAddresses] = useState<string[]>([]);
 
 	// ENS availability state
 	const [ensAvailability, setEnsAvailability] = useState<ENSAvailabilityResult | null>(null);
 	const [isCheckingENS, setIsCheckingENS] = useState(false);
 	const [ensValidation, setEnsValidation] = useState<{ valid: boolean; error?: string } | null>(null);
+
+	// Deployment state
+	const [isDeploying, setIsDeploying] = useState(false);
+	const [deploymentStep, setDeploymentStep] = useState<"form" | "signing" | "funding" | "deployed">("form");
+	const [agentWallet, setAgentWallet] = useState<{ address: string; privateKey: string } | null>(null);
+	const [isCheckingBalance, setIsCheckingBalance] = useState(false);
+	const [walletBalance, setWalletBalance] = useState<string>("0");
 
 	useEffect(() => {
 		if (!isConnected) {
@@ -60,7 +89,7 @@ function CreateAgent() {
 
 		setIsCheckingENS(true);
 		try {
-			const result = await checkENSAvailability(identifier.trim(), env.ENS_CONTRACT_ADDRESS);
+			const result = await checkENSAvailability(identifier.trim(), env.ENS_BASE_REGISTRAR_CONTRACT_ADDRESS);
 			setEnsAvailability(result);
 		} finally {
 			setIsCheckingENS(false);
@@ -78,9 +107,9 @@ function CreateAgent() {
 		return () => clearTimeout(timeoutId);
 	}, [formData.identifier, checkENS]);
 
-	const handleSubmit = (e: FormEvent) => {
+	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault();
-		
+
 		// Validate ENS name format and availability before submission
 		if (!ensValidation?.valid) {
 			toast.error(ensValidation?.error || "Please enter a valid ENS name.");
@@ -92,11 +121,25 @@ function CreateAgent() {
 			return;
 		}
 
-		console.log("Creating agent with data:", formData);
-		console.log("Environment variables:", envVars);
-		console.log("Profile picture:", formData.profilePicture ? `${formData.profilePicture.name} (${formData.profilePicture.size} bytes)` : "None");
-		console.log("ENS availability:", ensAvailability);
-		alert("Agent creation submitted! (This is a mock implementation)");
+		setIsDeploying(true);
+
+		try {
+			// Step 1: Sign message and create agent wallet
+			const walletInfo = await signMessageAndCreateWallet();
+
+			console.log("Creating agent with data:", formData);
+			console.log("Environment variables:", envVars);
+			console.log("Authorized addresses:", getAllAuthorizedAddresses());
+			console.log("Agent wallet:", walletInfo);
+			console.log(
+				"Profile picture:",
+				formData.profilePicture ? `${formData.profilePicture.name} (${formData.profilePicture.size} bytes)` : "None",
+			);
+			console.log("ENS availability:", ensAvailability);
+		} catch (error) {
+			console.error("Error creating agent:", error);
+			setIsDeploying(false);
+		}
 	};
 
 	const handleInputChange = (field: string, value: string) => {
@@ -117,11 +160,114 @@ function CreateAgent() {
 		}
 	};
 
-	const updateEnvVar = (index: number, field: 'key' | 'value', value: string) => {
-		const updated = envVars.map((envVar, i) =>
-			i === index ? { ...envVar, [field]: value } : envVar
-		);
+	const updateEnvVar = (index: number, field: "key" | "value", value: string) => {
+		const updated = envVars.map((envVar, i) => (i === index ? { ...envVar, [field]: value } : envVar));
 		setEnvVars(updated);
+	};
+
+	const addAuthorizedAddress = () => {
+		setAuthorizedAddresses([...authorizedAddresses, ""]);
+	};
+
+	const removeAuthorizedAddress = (index: number) => {
+		setAuthorizedAddresses(authorizedAddresses.filter((_, i) => i !== index));
+	};
+
+	const updateAuthorizedAddress = (index: number, value: string) => {
+		const updated = authorizedAddresses.map((addr, i) => (i === index ? value : addr));
+		setAuthorizedAddresses(updated);
+	};
+
+	const getAllAuthorizedAddresses = () => {
+		const addresses = [address, ...authorizedAddresses].filter(Boolean);
+		return [...new Set(addresses)]; // Remove duplicates
+	};
+
+	const signMessageAndCreateWallet = async () => {
+		if (!activeWallet) {
+			throw new Error("No active wallet found");
+		}
+
+		const account = activeWallet.getAccount();
+		if (!account) {
+			throw new Error("No account found");
+		}
+
+		const message = `Sign this message to generate the wallet for your agent '${formData.identifier}'. Do sign sign this message anywhere else than on the official Elara platform.`;
+
+		setDeploymentStep("signing");
+		toast.info("Please sign the message to create your agent wallet...");
+
+		try {
+			const signature = await account.signMessage({ message });
+			const privateKey = keccak256(signature);
+			const agentAccount = privateKeyToAccount({
+				client: thirdwebClient,
+				privateKey: privateKey,
+			});
+
+			const walletInfo = {
+				address: agentAccount.address,
+				privateKey: privateKey,
+			};
+
+			setAgentWallet(walletInfo);
+			setDeploymentStep("funding");
+			toast.success("Agent wallet created successfully!");
+
+			// Start checking balance
+			startBalancePolling(walletInfo.address);
+
+			return walletInfo;
+		} catch (error) {
+			console.error("Error signing message:", error);
+			toast.error("Failed to sign message. Please try again.");
+			setDeploymentStep("form");
+			throw error;
+		}
+	};
+
+	const checkWalletBalance = async (walletAddress: string) => {
+		try {
+			const rpcRequest = getRpcClient({
+				client: thirdwebClient,
+				chain: base,
+			});
+			const balance = await eth_getBalance(rpcRequest, { address: walletAddress });
+			const balanceInEth = Number(balance) / 1e18;
+			console.log(balanceInEth);
+			setWalletBalance(balanceInEth.toFixed(6));
+			return balanceInEth;
+		} catch (error) {
+			console.error("Error checking balance:", error);
+			return 0;
+		}
+	};
+
+	const startBalancePolling = async (walletAddress: string) => {
+		setIsCheckingBalance(true);
+
+		const pollBalance = async () => {
+			const balance = await checkWalletBalance(walletAddress);
+
+			if (balance >= 0.0001) {
+				// Minimum 0.0001 ETH required
+				setIsCheckingBalance(false);
+				setDeploymentStep("deployed");
+				toast.success("Agent wallet funded successfully! Ready for deployment.");
+				return true;
+			}
+
+			// Continue polling if balance is insufficient
+			setTimeout(pollBalance, 3000); // Check every 3 seconds
+		};
+
+		pollBalance();
+	};
+
+	const copyToClipboard = (text: string) => {
+		navigator.clipboard.writeText(text);
+		toast.success("Copied to clipboard!");
 	};
 
 	return (
@@ -168,10 +314,10 @@ function CreateAgent() {
 												ensValidation && !ensValidation.valid
 													? "border-red-500 focus:border-red-500"
 													: ensValidation?.valid && ensAvailability
-													? ensAvailability.available
-														? "border-green-500 focus:border-green-500"
-														: "border-red-500 focus:border-red-500"
-													: ""
+														? ensAvailability.available
+															? "border-green-500 focus:border-green-500"
+															: "border-red-500 focus:border-red-500"
+														: ""
 											}`}
 										/>
 										<div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -190,23 +336,18 @@ function CreateAgent() {
 									</div>
 									{/* ENS Validation Messages */}
 									{ensValidation && !ensValidation.valid && (
-										<p className="text-sm text-red-600">
-											✗ {ensValidation.error}
-										</p>
+										<p className="text-sm text-red-600">✗ {ensValidation.error}</p>
 									)}
 									{ensValidation?.valid && ensAvailability && (
-										<p className={`text-sm ${
-											ensAvailability.available
-												? "text-green-600"
-												: "text-red-600"
-										}`}>
+										<p className={`text-sm ${ensAvailability.available ? "text-green-600" : "text-red-600"}`}>
 											{ensAvailability.available
 												? `✓ ${formData.identifier} is available`
 												: `✗ ${ensAvailability.error || `${formData.identifier} is not available`}`}
 										</p>
 									)}
 									<div className="text-xs text-muted-foreground mt-1">
-										Name requirements: {ENS_CONFIG.OPTIONS.MIN_NAME_LENGTH}-{ENS_CONFIG.OPTIONS.MAX_NAME_LENGTH} characters, alphanumeric and hyphens only.
+										Name requirements: {ENS_CONFIG.OPTIONS.MIN_NAME_LENGTH}-{ENS_CONFIG.OPTIONS.MAX_NAME_LENGTH}{" "}
+										characters, alphanumeric and hyphens only.
 									</div>
 								</div>
 							</div>
@@ -249,11 +390,11 @@ function CreateAgent() {
 										<Button
 											type="button"
 											variant="outline"
-											onClick={() => document.getElementById('profilePicture')?.click()}
+											onClick={() => document.getElementById("profilePicture")?.click()}
 											className="flex items-center gap-2"
 										>
 											<Upload className="h-4 w-4" />
-											{formData.profilePicture ? 'Change Picture' : 'Upload Picture'}
+											{formData.profilePicture ? "Change Picture" : "Upload Picture"}
 										</Button>
 									</div>
 								</div>
@@ -293,12 +434,15 @@ function CreateAgent() {
 								</p>
 								<div className="space-y-3">
 									{envVars.map((envVar, index) => (
-										<div key={index} className="flex items-center gap-2 p-3 border rounded-lg bg-gray-50 dark:bg-gray-800">
+										<div
+											key={index}
+											className="flex items-center gap-2 p-3 border rounded-lg bg-gray-50 dark:bg-gray-800"
+										>
 											<div className="flex-1">
 												<Input
 													placeholder="Variable name (e.g., API_KEY)"
 													value={envVar.key}
-													onChange={(e) => updateEnvVar(index, 'key', e.target.value)}
+													onChange={(e) => updateEnvVar(index, "key", e.target.value)}
 													className="bg-white dark:bg-gray-700"
 												/>
 											</div>
@@ -307,7 +451,7 @@ function CreateAgent() {
 													placeholder="Variable value"
 													type="password"
 													value={envVar.value}
-													onChange={(e) => updateEnvVar(index, 'value', e.target.value)}
+													onChange={(e) => updateEnvVar(index, "value", e.target.value)}
 													className="bg-white dark:bg-gray-700"
 												/>
 											</div>
@@ -323,6 +467,74 @@ function CreateAgent() {
 											</Button>
 										</div>
 									))}
+								</div>
+							</div>
+
+							<div className="space-y-4">
+								<div className="flex items-center justify-between">
+									<Label className="text-base font-medium">Authorized Addresses</Label>
+									<Button
+										type="button"
+										variant="outline"
+										size="sm"
+										onClick={addAuthorizedAddress}
+										className="flex items-center gap-1"
+									>
+										<Plus className="h-4 w-4" />
+										Add Address
+									</Button>
+								</div>
+								<p className="text-sm text-muted-foreground">
+									Specify which addresses can call this agent. Your wallet address is always included and cannot be
+									removed.
+								</p>
+								<div className="space-y-3">
+									{/* User's wallet address (always included, cannot be removed) */}
+									<div className="flex items-center gap-2 p-3 border rounded-lg bg-blue-50 dark:bg-blue-900/20">
+										<div className="flex-1">
+											<Input
+												placeholder="Your wallet address"
+												value={address || ""}
+												disabled
+												className="bg-white dark:bg-gray-700 font-mono text-sm"
+											/>
+										</div>
+										<div className="flex items-center gap-2 text-xs text-muted-foreground">
+											<Shield className="h-3 w-3" />
+											Owner
+										</div>
+									</div>
+									{/* Additional authorized addresses */}
+									{authorizedAddresses.map((addr, index) => (
+										<div
+											key={index}
+											className="flex items-center gap-2 p-3 border rounded-lg bg-gray-50 dark:bg-gray-800"
+										>
+											<div className="flex-1">
+												<Input
+													placeholder="0x1234567890abcdef1234567890abcdef12345678"
+													value={addr}
+													onChange={(e) => updateAuthorizedAddress(index, e.target.value)}
+													className="bg-white dark:bg-gray-700 font-mono text-sm"
+												/>
+											</div>
+											<Button
+												type="button"
+												variant="ghost"
+												size="sm"
+												onClick={() => removeAuthorizedAddress(index)}
+												className="p-2"
+											>
+												<X className="h-4 w-4" />
+											</Button>
+										</div>
+									))}
+									{authorizedAddresses.length === 0 && (
+										<p className="text-sm text-muted-foreground italic text-center py-4">
+											No additional authorized addresses. Click "Add Address" to allow other addresses to call your
+											agent.
+										</p>
+									)}
 								</div>
 							</div>
 
@@ -350,9 +562,109 @@ function CreateAgent() {
 										</div>
 									</div>
 								</div>
-								<Button type="submit" className="w-full" size="lg">
-									Deploy AI Agent
-								</Button>
+
+								{/* Deployment Steps */}
+								{deploymentStep === "form" && (
+									<Button type="submit" className="w-full" size="lg" disabled={isDeploying}>
+										{isDeploying ? (
+											<>
+												<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+												Creating Agent Wallet...
+											</>
+										) : (
+											"Deploy AI Agent"
+										)}
+									</Button>
+								)}
+
+								{deploymentStep === "signing" && (
+									<div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg">
+										<div className="flex items-center gap-3 mb-4">
+											<Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+											<h3 className="font-semibold text-blue-900 dark:text-blue-100">Signing Message</h3>
+										</div>
+										<p className="text-sm text-blue-800 dark:text-blue-200">
+											Please sign the message in your wallet to create the agent wallet. This signature will be used to
+											generate a unique private key for your agent.
+										</p>
+									</div>
+								)}
+
+								{deploymentStep === "funding" && agentWallet && (
+									<div className="bg-orange-50 dark:bg-orange-900/20 p-6 rounded-lg">
+										<div className="flex items-center gap-3 mb-4">
+											<Wallet className="h-5 w-5 text-orange-600" />
+											<h3 className="font-semibold text-orange-900 dark:text-orange-100">Fund Agent Wallet</h3>
+										</div>
+										<p className="text-sm text-orange-800 dark:text-orange-200 mb-4">
+											Your agent wallet has been created! Please send some ETH to this address on Base network to pay
+											for deployment transaction fees.
+										</p>
+										<div className="bg-white dark:bg-gray-800 p-4 rounded-lg border">
+											<div className="flex items-center gap-2 mb-2">
+												<Label className="text-sm font-medium">Agent Wallet Address:</Label>
+												<Button
+													type="button"
+													variant="ghost"
+													size="sm"
+													onClick={() => copyToClipboard(agentWallet.address)}
+													className="h-6 w-6 p-0"
+												>
+													<Copy className="h-3 w-3" />
+												</Button>
+											</div>
+											<div className="font-mono text-sm bg-gray-50 dark:bg-gray-700 p-2 rounded break-all">
+												{agentWallet.address}
+											</div>
+											<div className="flex items-center gap-2 mt-3">
+												<Label className="text-sm font-medium">Current Balance:</Label>
+												<span className="font-mono text-sm">{walletBalance} ETH</span>
+												{isCheckingBalance && <Loader2 className="h-3 w-3 animate-spin" />}
+											</div>
+										</div>
+										<div className="flex items-center gap-2 mt-4 text-sm text-orange-700 dark:text-orange-300">
+											<AlertCircle className="h-4 w-4" />
+											<span>Minimum 0.0001 ETH required. We're monitoring the balance automatically.</span>
+										</div>
+									</div>
+								)}
+
+								{deploymentStep === "deployed" && (
+									<div className="bg-green-50 dark:bg-green-900/20 p-6 rounded-lg">
+										<div className="flex items-center gap-3 mb-4">
+											<CheckCircle className="h-5 w-5 text-green-600" />
+											<h3 className="font-semibold text-green-900 dark:text-green-100">Ready for Deployment</h3>
+										</div>
+										<p className="text-sm text-green-800 dark:text-green-200 mb-4">
+											Your agent wallet has been funded successfully! The deployment process will continue in the
+											background.
+										</p>
+										<div className="bg-white dark:bg-gray-800 p-4 rounded-lg border">
+											<div className="flex items-center gap-2 mb-2">
+												<Label className="text-sm font-medium">Agent Wallet:</Label>
+												<Button
+													type="button"
+													variant="ghost"
+													size="sm"
+													onClick={() => copyToClipboard(agentWallet?.address || "")}
+													className="h-6 w-6 p-0"
+												>
+													<Copy className="h-3 w-3" />
+												</Button>
+											</div>
+											<div className="font-mono text-sm bg-gray-50 dark:bg-gray-700 p-2 rounded break-all">
+												{agentWallet?.address}
+											</div>
+											<div className="flex items-center gap-2 mt-3">
+												<Label className="text-sm font-medium">Balance:</Label>
+												<span className="font-mono text-sm">{walletBalance} ETH</span>
+											</div>
+										</div>
+										<p className="text-sm text-muted-foreground mt-4">
+											This is a mock implementation. In production, the backend deployment would begin now.
+										</p>
+									</div>
+								)}
 							</div>
 						</form>
 					</CardContent>
