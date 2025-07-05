@@ -426,7 +426,7 @@ function CreateAgent() {
 		});
 
 		// Hardcoded content hash
-		const contentHashBytes = "0xe3010170122029f2d17be6139079dc48696d1f582a8530eb9805b561eda517e22a892c7e3f1f";
+		const contentHashBytes = "0xe30101701220c95cc6264e17fc8687a5a59703c2de3bf22a5b12faec21665a006a0f6a6d8e91";
 		const node = namehash(`${formData.identifier}.elara-app.eth`);
 
 		const transaction = prepareContractCall({

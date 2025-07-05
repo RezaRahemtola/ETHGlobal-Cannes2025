@@ -2,6 +2,7 @@ import { Message } from "@/types/chat";
 import { thirdwebClient } from "@/config/thirdweb";
 import { base } from "thirdweb/chains";
 import { getContract, readContract } from "thirdweb";
+import keccak from "keccak";
 
 const ENS_REGISTRY_ADDRESS = "0xc3a4eB979e9035486b54Fe8b57D36aEF9519eAc6";
 
@@ -61,7 +62,6 @@ async function resolveDynamicApiBaseUrl(): Promise<string> {
 }
 
 function ensNameToNode(name: string): string {
-	const keccak = require("keccak");
 	const labels = name.split(".");
 	let node = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
