@@ -32,7 +32,7 @@ import { base } from "thirdweb/chains";
 import { eth_getBalance, getRpcClient } from "thirdweb/rpc";
 import { encodePacked, keccak256 } from "thirdweb/utils";
 import { getContract, prepareContractCall, sendTransaction, waitForReceipt } from "thirdweb";
-import { uploadFileUploadPost } from "@/apis/backend/sdk.gen";
+import { deployProgramDeployPost, uploadFileUploadPost } from "@/apis/backend/sdk.gen";
 
 export const Route = createFileRoute("/create-agent")({
 	component: CreateAgent,
@@ -47,6 +47,7 @@ function CreateAgent() {
 		description: "",
 		identifier: "",
 		profilePicture: null as File | null,
+		agentCodeZip: null as File | null,
 	});
 
 	const [envVars, setEnvVars] = useState<{ key: string; value: string }[]>([{ key: "", value: "" }]);
@@ -60,9 +61,9 @@ function CreateAgent() {
 
 	// Deployment state
 	const [isDeploying, setIsDeploying] = useState(false);
-	const [deploymentStep, setDeploymentStep] = useState<"form" | "signing" | "funding" | "registering" | "deployed">(
-		"form",
-	);
+	const [deploymentStep, setDeploymentStep] = useState<
+		"form" | "signing" | "funding" | "registering" | "deploying" | "deployed"
+	>("form");
 	const [agentWallet, setAgentWallet] = useState<{ address: string; privateKey: string } | null>(null);
 	const [isCheckingBalance, setIsCheckingBalance] = useState(false);
 	const [walletBalance, setWalletBalance] = useState<string>("0");
@@ -72,6 +73,11 @@ function CreateAgent() {
 		allowedCallersSet: "pending" | "loading" | "completed";
 		avatarSet: "pending" | "loading" | "completed";
 	}>({ ensRegistered: "pending", contentHashSet: "pending", allowedCallersSet: "pending", avatarSet: "pending" });
+
+	// Deployment progress state
+	const [deploymentProgress, setDeploymentProgress] = useState<{
+		backend: "pending" | "loading" | "completed";
+	}>({ backend: "pending" });
 
 	useEffect(() => {
 		if (!isConnected) {
@@ -128,6 +134,12 @@ function CreateAgent() {
 
 		if (!ensAvailability?.available) {
 			toast.error(ensAvailability?.error || "Please choose an available ENS name before submitting.");
+			return;
+		}
+
+		// Validate agent code zip file
+		if (!formData.agentCodeZip) {
+			toast.error("Please upload the agent code ZIP file.");
 			return;
 		}
 
@@ -344,7 +356,17 @@ function CreateAgent() {
 				setRegistrationProgress((prev) => ({ ...prev, avatarSet: "completed" }));
 			}
 
-			setDeploymentStep("deployed");
+			// Step 5: Deploy agent code
+			setDeploymentStep("deploying");
+			try {
+				await deployAgentCode();
+				setDeploymentStep("deployed");
+			} catch (error) {
+				console.error("Error deploying agent code:", error);
+				toast.error(`Agent deployment failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+				setDeploymentStep("registering");
+				throw error;
+			}
 		} catch (error) {
 			console.error("Error during ENS registration:", error);
 			throw error;
@@ -470,6 +492,48 @@ function CreateAgent() {
 			chain: base,
 			transactionHash: result.transactionHash,
 		});
+	};
+
+	const deployAgentCode = async () => {
+		if (!formData.agentCodeZip) {
+			throw new Error("No agent code ZIP file provided");
+		}
+
+		try {
+			setDeploymentProgress((prev) => ({ ...prev, backend: "loading" }));
+			toast.info("Deploying agent code to Aleph network...");
+
+			// Create environment variables string
+			const environmentVars = envVars
+				.filter((env) => env.key.trim() && env.value.trim())
+				.reduce(
+					(acc, env) => {
+						acc[env.key] = env.value;
+						return acc;
+					},
+					{} as Record<string, string>,
+				);
+
+			const environmentString = JSON.stringify(environmentVars);
+
+			// Deploy the ZIP file that was uploaded in the form
+			const deployResponse = await deployProgramDeployPost({
+				body: {
+					file: formData.agentCodeZip,
+					environment: environmentString,
+				},
+			});
+
+			setDeploymentProgress((prev) => ({ ...prev, backend: "completed" }));
+			toast.success("Agent code deployed successfully to Aleph network!");
+
+			// Log deployment result
+			console.log("Agent deployment result:", deployResponse.data);
+		} catch (error) {
+			console.error("Error deploying agent code:", error);
+			setDeploymentProgress((prev) => ({ ...prev, backend: "pending" }));
+			throw error;
+		}
 	};
 
 	return (
@@ -602,6 +666,45 @@ function CreateAgent() {
 								</div>
 								<p className="text-sm text-muted-foreground">
 									Upload a profile picture for your AI agent. Supported formats: JPG, PNG, GIF (max 5MB)
+								</p>
+							</div>
+
+							<div className="space-y-2">
+								<Label htmlFor="agentCodeZip">Agent Code (ZIP file) *</Label>
+								<div className="flex items-center gap-4">
+									<div className="flex-1">
+										<input
+											id="agentCodeZip"
+											type="file"
+											accept=".zip"
+											onChange={(e) => setFormData((prev) => ({ ...prev, agentCodeZip: e.target.files?.[0] || null }))}
+											className="hidden"
+											required
+										/>
+										<Button
+											type="button"
+											variant="outline"
+											onClick={() => document.getElementById("agentCodeZip")?.click()}
+											className="flex items-center gap-2 w-full"
+										>
+											<Upload className="h-4 w-4" />
+											{formData.agentCodeZip ? formData.agentCodeZip.name : "Choose ZIP file"}
+										</Button>
+									</div>
+									{formData.agentCodeZip && (
+										<Button
+											type="button"
+											variant="ghost"
+											size="sm"
+											onClick={() => setFormData((prev) => ({ ...prev, agentCodeZip: null }))}
+											className="text-red-500 hover:text-red-700"
+										>
+											<X className="h-4 w-4" />
+										</Button>
+									)}
+								</div>
+								<p className="text-sm text-muted-foreground">
+									Upload a ZIP file containing your agent's code. This will be deployed to the Aleph network.
 								</p>
 							</div>
 
@@ -929,15 +1032,54 @@ function CreateAgent() {
 									</div>
 								)}
 
+								{deploymentStep === "deploying" && (
+									<div className="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-lg">
+										<div className="flex items-center gap-3 mb-4">
+											<Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
+											<h3 className="font-semibold text-indigo-900 dark:text-indigo-100">Deploying Agent Code</h3>
+										</div>
+										<p className="text-sm text-indigo-800 dark:text-indigo-200 mb-4">
+											Deploying your agent code to the Aleph network...
+										</p>
+										<div className="space-y-2">
+											<div className="flex items-center gap-2 text-sm">
+												<CheckCircle className="h-4 w-4 text-green-500" />
+												<span className="text-green-700 dark:text-green-300">
+													Agent code ZIP file ready ({formData.agentCodeZip?.name})
+												</span>
+											</div>
+											<div className="flex items-center gap-2 text-sm">
+												{deploymentProgress.backend === "completed" ? (
+													<CheckCircle className="h-4 w-4 text-green-500" />
+												) : deploymentProgress.backend === "loading" ? (
+													<Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
+												) : (
+													<div className="h-4 w-4 rounded-full border-2 border-gray-300"></div>
+												)}
+												<span
+													className={
+														deploymentProgress.backend === "completed"
+															? "text-green-700 dark:text-green-300"
+															: deploymentProgress.backend === "loading"
+																? "text-indigo-700 dark:text-indigo-300"
+																: "text-gray-600 dark:text-gray-400"
+													}
+												>
+													Deploy to Aleph network
+												</span>
+											</div>
+										</div>
+									</div>
+								)}
+
 								{deploymentStep === "deployed" && (
 									<div className="bg-green-50 dark:bg-green-900/20 p-6 rounded-lg">
 										<div className="flex items-center gap-3 mb-4">
 											<CheckCircle className="h-5 w-5 text-green-600" />
-											<h3 className="font-semibold text-green-900 dark:text-green-100">Ready for Deployment</h3>
+											<h3 className="font-semibold text-green-900 dark:text-green-100">Agent Deployed Successfully!</h3>
 										</div>
 										<p className="text-sm text-green-800 dark:text-green-200 mb-4">
-											Your agent wallet has been funded successfully! The deployment process will continue in the
-											background.
+											Your AI agent has been successfully deployed to the Aleph network! It's now ready to use.
 										</p>
 										<div className="bg-white dark:bg-gray-800 p-4 rounded-lg border">
 											<div className="flex items-center gap-2 mb-2">
@@ -960,9 +1102,18 @@ function CreateAgent() {
 												<span className="font-mono text-sm">{walletBalance} ETH</span>
 											</div>
 										</div>
-										<p className="text-sm text-muted-foreground mt-4">
-											This is a mock implementation. In production, the backend deployment would begin now.
-										</p>
+										<div className="mt-4 p-4 bg-green-100 dark:bg-green-900/30 rounded-lg">
+											<p className="text-sm text-green-800 dark:text-green-200 font-medium">
+												✅ Agent code successfully deployed to Aleph network
+											</p>
+											<p className="text-sm text-green-700 dark:text-green-300 mt-1">
+												Your agent is now accessible at:{" "}
+												<a href={`https://${formData.identifier}.elara-app.eth.limo`}>
+													{" "}
+													{formData.identifier}.elara-app.eth
+												</a>
+											</p>
+										</div>
 									</div>
 								)}
 							</div>
