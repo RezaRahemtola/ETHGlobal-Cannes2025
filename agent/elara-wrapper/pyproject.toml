@@ -1,6 +1,6 @@
 [project]
 name = "elara-wrapper"
-version = "0.0.5"
+version = "0.0.6"
 description = "A FastAPI middleware package to validate requests to Elara agents based on the permissions set in their ENS name."
 authors = []
 readme = "README.md"

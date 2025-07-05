@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useWalletStore } from "@/stores/wallet";
-import { Bot, Globe, Shield, Sparkles, Plus, X } from "lucide-react";
+import { Bot, Globe, Shield, Sparkles, Plus, X, Upload, User } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -19,6 +19,7 @@ function CreateAgent() {
 		name: "",
 		description: "",
 		identifier: "",
+		profilePicture: null as File | null,
 	});
 
 	const [envVars, setEnvVars] = useState<{ key: string; value: string }[]>([
@@ -36,11 +37,16 @@ function CreateAgent() {
 		e.preventDefault();
 		console.log("Creating agent with data:", formData);
 		console.log("Environment variables:", envVars);
+		console.log("Profile picture:", formData.profilePicture ? `${formData.profilePicture.name} (${formData.profilePicture.size} bytes)` : "None");
 		alert("Agent creation submitted! (This is a mock implementation)");
 	};
 
 	const handleInputChange = (field: string, value: string) => {
 		setFormData((prev) => ({ ...prev, [field]: value }));
+	};
+
+	const handleFileChange = (file: File | null) => {
+		setFormData((prev) => ({ ...prev, profilePicture: file }));
 	};
 
 	const addEnvVar = () => {
@@ -101,6 +107,57 @@ function CreateAgent() {
 										required
 									/>
 								</div>
+							</div>
+
+							<div className="space-y-2">
+								<Label htmlFor="profilePicture">Profile Picture (Optional)</Label>
+								<div className="flex items-center gap-4">
+									<div className="flex-shrink-0 relative group">
+										{formData.profilePicture ? (
+											<>
+												<img
+													src={URL.createObjectURL(formData.profilePicture)}
+													alt="Profile preview"
+													className="w-16 h-16 rounded-full object-cover border-2 border-gray-300"
+												/>
+												<Button
+													type="button"
+													variant="ghost"
+													size="sm"
+													onClick={() => handleFileChange(null)}
+													className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 hover:bg-red-600 text-white p-0 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+												>
+													<X className="h-3 w-3" />
+												</Button>
+											</>
+										) : (
+											<div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 border-2 border-gray-300 flex items-center justify-center">
+												<User className="h-8 w-8 text-gray-400" />
+											</div>
+										)}
+									</div>
+									<div className="flex-1">
+										<input
+											id="profilePicture"
+											type="file"
+											accept="image/*"
+											onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
+											className="hidden"
+										/>
+										<Button
+											type="button"
+											variant="outline"
+											onClick={() => document.getElementById('profilePicture')?.click()}
+											className="flex items-center gap-2"
+										>
+											<Upload className="h-4 w-4" />
+											{formData.profilePicture ? 'Change Picture' : 'Upload Picture'}
+										</Button>
+									</div>
+								</div>
+								<p className="text-sm text-muted-foreground">
+									Upload a profile picture for your AI agent. Supported formats: JPG, PNG, GIF (max 5MB)
+								</p>
 							</div>
 
 							<div className="space-y-2">
