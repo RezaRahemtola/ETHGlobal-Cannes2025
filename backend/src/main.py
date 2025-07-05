@@ -94,12 +94,11 @@ async def deploy_program(
                 # Deploy the program
                 program_result, status = await client.create_program(
                     program_ref=store_message.item_hash,
-                    entrypoint="main:app",
-                    runtime=settings.DEFAULT_RUNTIME_ID,
-                    memory=256,
-                    timeout_seconds=10,
-                    internet=True,
-                    aleph_api=True,
+                    entrypoint="run",
+                    runtime="ec3849e32bc8e6ef9e7645ad09820ad4ccc7ff39e5cf96495181e54b21a1ff34",
+                    memory=4000,
+                    vcpus=2,
+                    persistent=True,
                     environment_variables=env_vars,
                     metadata={
                         "name": file.filename,

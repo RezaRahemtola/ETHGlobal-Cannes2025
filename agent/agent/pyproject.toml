@@ -19,3 +19,8 @@ build-backend = "hatchling.build"
 
 [tool.poetry]
 package-mode = false
+
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.16.1"
+ruff = "^0.12.2"
