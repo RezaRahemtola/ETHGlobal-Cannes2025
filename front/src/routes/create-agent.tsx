@@ -52,6 +52,9 @@ function CreateAgent() {
 
 	const [envVars, setEnvVars] = useState<{ key: string; value: string }[]>([{ key: "", value: "" }]);
 
+	// Immutable environment variables that cannot be removed
+	const immutableEnvVars = [{ key: "ELARA_ENS_SUBNAME", value: formData.identifier }];
+
 	const [authorizedAddresses, setAuthorizedAddresses] = useState<string[]>([]);
 
 	// ENS availability state
@@ -548,7 +551,7 @@ function CreateAgent() {
 			toast.info("Deploying agent code to Aleph network...");
 
 			// Create environment variables string
-			const environmentVars = envVars
+			const environmentVars = [...immutableEnvVars, ...envVars]
 				.filter((env) => env.key.trim() && env.value.trim())
 				.reduce(
 					(acc, env) => {
@@ -786,6 +789,35 @@ function CreateAgent() {
 									These variables will be encrypted and securely stored on-chain with Oasis privacy features.
 								</p>
 								<div className="space-y-3">
+									{/* Immutable environment variables */}
+									{immutableEnvVars.map((envVar, index) => (
+										<div
+											key={`immutable-${index}`}
+											className="flex items-center gap-2 p-3 border rounded-lg bg-blue-50 dark:bg-blue-900/20"
+										>
+											<div className="flex-1">
+												<Input
+													placeholder="Variable name"
+													value={envVar.key}
+													disabled
+													className="bg-white dark:bg-gray-700 font-mono text-sm"
+												/>
+											</div>
+											<div className="flex-1">
+												<Input
+													placeholder="Variable value"
+													value={envVar.value}
+													disabled
+													className="bg-white dark:bg-gray-700 font-mono text-sm"
+												/>
+											</div>
+											<div className="flex items-center gap-2 text-xs text-muted-foreground">
+												<Shield className="h-3 w-3" />
+												Required
+											</div>
+										</div>
+									))}
+									{/* User-defined environment variables */}
 									{envVars.map((envVar, index) => (
 										<div
 											key={index}
@@ -1176,9 +1208,13 @@ function CreateAgent() {
 											</p>
 											<p className="text-sm text-green-700 dark:text-green-300 mt-1">
 												Your agent is now accessible at:{" "}
-												<a href={`https://${formData.identifier}.elara-app.eth.limo`}>
+												<a
+													href={`https://${formData.identifier}.elara-app.eth.limo`}
+													target="_blank"
+													className="underline hover:text-green-600 dark:hover:text-green-400"
+												>
 													{" "}
-													{formData.identifier}.elara-app.eth
+													https://{formData.identifier}.elara-app.eth
 												</a>
 											</p>
 											{deploymentResponse?.program_hash ? (
@@ -1188,23 +1224,11 @@ function CreateAgent() {
 														<a
 															href={`https://aleph-crn.rezar.fr/vm/${deploymentResponse.program_hash}`}
 															target="_blank"
-															rel="noopener noreferrer"
 															className="underline hover:text-green-600 dark:hover:text-green-400"
 														>
 															{`https://aleph-crn.rezar.fr/vm/${deploymentResponse.program_hash}`}
 														</a>
 													</p>
-													<Button
-														type="button"
-														variant="ghost"
-														size="sm"
-														onClick={() =>
-															copyToClipboard(`https://aleph-crn.rezar.fr/vm/${deploymentResponse.program_hash}`)
-														}
-														className="h-6 w-6 p-0"
-													>
-														<Copy className="h-3 w-3" />
-													</Button>
 												</div>
 											) : (
 												<></>

@@ -12,6 +12,7 @@ from libertai_agents.agents import Agent
 from libertai_agents.interfaces.messages import Message
 from libertai_agents.interfaces.tools import Tool
 from libertai_agents.models import get_model
+from starlette.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
@@ -40,8 +41,15 @@ agent = Agent(
 app = FastAPI()
 
 # Add the Elara middleware & auth router
-add_elara_middleware(app, "True")
+add_elara_middleware(app, os.getenv("ELARA_ENS_SUBNAME"))
 app.include_router(elara_auth_router)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.post("/generate")
