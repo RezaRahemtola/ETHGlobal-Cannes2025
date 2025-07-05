@@ -15,7 +15,8 @@ app = FastAPI(title="Elora backend")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[] + (["http://localhost:5173"] if config.IS_DEVELOPMENT else []),
+    allow_origins=["https://elara.rezar.fr"]
+    + (["http://localhost:5173"] if config.IS_DEVELOPMENT else []),
     allow_methods=["*"],
     allow_headers=["*"],
 )
