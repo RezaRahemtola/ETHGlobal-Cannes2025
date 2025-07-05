@@ -4,9 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useWalletStore } from "@/stores/wallet";
-import { Bot, Globe, Shield, Sparkles, Plus, X, Upload, User } from "lucide-react";
-import { FormEvent, useEffect, useState } from "react";
+import { Bot, Globe, Shield, Sparkles, Plus, X, Upload, User, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { FormEvent, useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
+import { checkENSAvailability, type ENSAvailabilityResult } from "@/utils/ensAvailability";
+import { validateENSName, ENS_CONFIG } from "@/config/ens";
+import env from "@/config/env";
 
 export const Route = createFileRoute("/create-agent")({
 	component: CreateAgent,
@@ -26,6 +29,11 @@ function CreateAgent() {
 		{ key: "", value: "" }
 	]);
 
+	// ENS availability state
+	const [ensAvailability, setEnsAvailability] = useState<ENSAvailabilityResult | null>(null);
+	const [isCheckingENS, setIsCheckingENS] = useState(false);
+	const [ensValidation, setEnsValidation] = useState<{ valid: boolean; error?: string } | null>(null);
+
 	useEffect(() => {
 		if (!isConnected) {
 			toast.error("Please connect your wallet to create an agent.");
@@ -33,11 +41,61 @@ function CreateAgent() {
 		}
 	}, [isConnected, router]);
 
+	// Check ENS availability
+	const checkENS = useCallback(async (identifier: string) => {
+		if (!identifier.trim()) {
+			setEnsAvailability(null);
+			setEnsValidation(null);
+			return;
+		}
+
+		// Validate name format
+		const validation = validateENSName(identifier);
+		setEnsValidation(validation);
+
+		if (!validation.valid) {
+			setEnsAvailability(null);
+			return;
+		}
+
+		setIsCheckingENS(true);
+		try {
+			const result = await checkENSAvailability(identifier.trim(), env.ENS_CONTRACT_ADDRESS);
+			setEnsAvailability(result);
+		} finally {
+			setIsCheckingENS(false);
+		}
+	}, []);
+
+	// Debounce ENS check
+	useEffect(() => {
+		const timeoutId = setTimeout(() => {
+			if (formData.identifier) {
+				checkENS(formData.identifier);
+			}
+		}, ENS_CONFIG.OPTIONS.DEBOUNCE_DELAY);
+
+		return () => clearTimeout(timeoutId);
+	}, [formData.identifier, checkENS]);
+
 	const handleSubmit = (e: FormEvent) => {
 		e.preventDefault();
+		
+		// Validate ENS name format and availability before submission
+		if (!ensValidation?.valid) {
+			toast.error(ensValidation?.error || "Please enter a valid ENS name.");
+			return;
+		}
+
+		if (!ensAvailability?.available) {
+			toast.error(ensAvailability?.error || "Please choose an available ENS name before submitting.");
+			return;
+		}
+
 		console.log("Creating agent with data:", formData);
 		console.log("Environment variables:", envVars);
 		console.log("Profile picture:", formData.profilePicture ? `${formData.profilePicture.name} (${formData.profilePicture.size} bytes)` : "None");
+		console.log("ENS availability:", ensAvailability);
 		alert("Agent creation submitted! (This is a mock implementation)");
 	};
 
@@ -99,13 +157,57 @@ function CreateAgent() {
 								</div>
 								<div className="space-y-2">
 									<Label htmlFor="ensName">Identifier (ENS name)</Label>
-									<Input
-										id="ensName"
-										placeholder="myagent"
-										value={formData.identifier}
-										onChange={(e) => handleInputChange("ensName", e.target.value)}
-										required
-									/>
+									<div className="relative">
+										<Input
+											id="ensName"
+											placeholder="myagent"
+											value={formData.identifier}
+											onChange={(e) => handleInputChange("identifier", e.target.value)}
+											required
+											className={`pr-10 ${
+												ensValidation && !ensValidation.valid
+													? "border-red-500 focus:border-red-500"
+													: ensValidation?.valid && ensAvailability
+													? ensAvailability.available
+														? "border-green-500 focus:border-green-500"
+														: "border-red-500 focus:border-red-500"
+													: ""
+											}`}
+										/>
+										<div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+											{isCheckingENS ? (
+												<Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+											) : ensValidation && !ensValidation.valid ? (
+												<XCircle className="h-4 w-4 text-red-500" />
+											) : ensValidation?.valid && ensAvailability ? (
+												ensAvailability.available ? (
+													<CheckCircle className="h-4 w-4 text-green-500" />
+												) : (
+													<XCircle className="h-4 w-4 text-red-500" />
+												)
+											) : null}
+										</div>
+									</div>
+									{/* ENS Validation Messages */}
+									{ensValidation && !ensValidation.valid && (
+										<p className="text-sm text-red-600">
+											✗ {ensValidation.error}
+										</p>
+									)}
+									{ensValidation?.valid && ensAvailability && (
+										<p className={`text-sm ${
+											ensAvailability.available
+												? "text-green-600"
+												: "text-red-600"
+										}`}>
+											{ensAvailability.available
+												? `✓ ${formData.identifier} is available`
+												: `✗ ${ensAvailability.error || `${formData.identifier} is not available`}`}
+										</p>
+									)}
+									<div className="text-xs text-muted-foreground mt-1">
+										Name requirements: {ENS_CONFIG.OPTIONS.MIN_NAME_LENGTH}-{ENS_CONFIG.OPTIONS.MAX_NAME_LENGTH} characters, alphanumeric and hyphens only.
+									</div>
 								</div>
 							</div>
 
