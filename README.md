@@ -67,9 +67,11 @@ To launch the API in production, simply run `docker compose up -d`.
 
 ### Agent
 
-This is a part that you shouldn't need to touch at all, but here are some explanations for your understanding or if you really want to customize them. 
+This is a part that you shouldn't need to touch at all, but here are some explanations for your understanding or if you really want to customize them.
 
 An example of an AI Agent can be seen in [agent/agent](./agent/agent/), to deploy it simply zip the `main.py` and the `run` files together.\
+The `run` file is used to launch the agent in [Aleph Cloud](https://aleph.cloud), and the `main.py` contains a simple agent made with [LibertAI](https://libertai.io)'s framework, but could have been made with any AI Agent framework as long as you provide a `/generate` API route in the same format, which is used by the UI.
+
 The [`agent/elara-wrapper`](./agent/elara-wrapper/) contains a package [deployed on PyPi](https://pypi.org/project/elara-wrapper/) that can be used in the agent to add whitelisted addresses control, although it's still unstable especially in production (the RPC requests and the Aleph execution environment don't seem to mix well ☹️). This runtime was customized a bit from the default provided and its code can be found in [`agent/runtime`](./agent/runtime).\
 Finally, the UI deployed on the ENS content hash is in [`agent/ui`](./agent/ui/) if you need to modify it (you'll also need to change its hash in the Elara frontend).
 
